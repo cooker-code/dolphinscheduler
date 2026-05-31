@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DS · SQL Studio</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-root:      #0f0f17;
+    --bg-sidebar:   #13131c;
+    --bg-panel:     #16161f;
+    --bg-editor:    #1a1a27;
+    --bg-elevated:  #1e1e2e;
+    --bg-hover:     #22223a;
+    --bg-active:    #2a2a45;
+
+    --border:       #252538;
+    --border-light: #2e2e4a;
+
+    --text-primary:   #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted:     #5a5a7a;
+    --text-code:      #cdd6f4;
+
+    --accent-1:   #6366f1;
+    --accent-2:   #8b5cf6;
+    --accent-grad: linear-gradient(135deg, #6366f1, #8b5cf6);
+    --accent-glow: rgba(99, 102, 241, 0.25);
+
+    --green:  #10b981;
+    --green-dim: rgba(16, 185, 129, 0.15);
+    --orange: #f59e0b;
+    --orange-dim: rgba(245, 158, 11, 0.15);
+    --red:    #ef4444;
+    --red-dim: rgba(239, 68, 68, 0.15);
+    --blue:   #38bdf8;
+
+    --font-ui:   -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+
+    --radius:   8px;
+    --radius-sm: 4px;
+    --radius-lg: 12px;
+  }
+
+  html, body { height: 100%; overflow: hidden; background: var(--bg-root); color: var(--text-primary); font-family: var(--font-ui); font-size: 13px; line-height: 1.5; }
+
+  /* ─── LAYOUT ─────────────────────────────────────────────────── */
+  .app { display: flex; flex-direction: column; height: 100vh; }
+
+  /* ─── TOPBAR ──────────────────────────────────────────────────── */
+  .topbar {
+    height: 48px; min-height: 48px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 0;
+    padding: 0 16px;
+    z-index: 100;
+    position: relative;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; min-width: 220px; }
+  .logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; letter-spacing: -0.3px; }
+  .logo-icon {
+    width: 26px; height: 26px; border-radius: 6px;
+    background: var(--accent-grad);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800; color: #fff; letter-spacing: -0.5px;
+  }
+  .logo-text { color: var(--text-primary); }
+  .logo-sep { color: var(--text-muted); margin: 0 2px; }
+  .project-select {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--bg-elevated); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 3px 8px;
+    cursor: pointer; color: var(--text-secondary); font-size: 12px;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .project-select:hover { border-color: var(--border-light); background: var(--bg-hover); color: var(--text-primary); }
+  .project-select svg { opacity: 0.5; }
+
+  .topbar-center {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+    overflow: hidden;
+  }
+  .breadcrumb { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 12.5px; }
+  .breadcrumb-item { color: var(--text-secondary); }
+  .breadcrumb-item.active { color: var(--text-primary); font-weight: 500; }
+  .breadcrumb-sep { color: var(--text-muted); opacity: 0.5; }
+  .branch-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.35);
+    border-radius: 20px; padding: 2px 9px; font-size: 11px;
+    color: #a5b4fc; white-space: nowrap;
+  }
+  .branch-badge .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent-1); }
+  .ahead-tag {
+    background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3);
+    color: #6ee7b7; border-radius: 20px; padding: 1px 7px; font-size: 10px; font-weight: 600;
+  }
+
+  .topbar-right { display: flex; align-items: center; gap: 8px; min-width: 220px; justify-content: flex-end; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: var(--radius-sm); font-size: 12.5px;
+    font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; white-space: nowrap;
+    font-family: var(--font-ui);
+  }
+  .btn-outline {
+    background: transparent; border: 1px solid var(--border-light); color: var(--text-secondary);
+  }
+  .btn-outline:hover { border-color: var(--accent-1); color: var(--accent-1); background: var(--accent-glow); }
+  .btn-outline:active { transform: scale(0.97); }
+  .btn-primary {
+    background: var(--accent-grad); color: #fff;
+    box-shadow: 0 2px 12px rgba(99,102,241,0.35);
+  }
+  .btn-primary:hover { box-shadow: 0 4px 20px rgba(99,102,241,0.5); filter: brightness(1.1); }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-primary.loading { opacity: 0.75; pointer-events: none; }
+  .btn svg { flex-shrink: 0; }
+
+  .avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #a78bfa);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #fff; cursor: pointer;
+    border: 2px solid var(--border-light);
+    transition: border-color 0.15s;
+  }
+  .avatar:hover { border-color: var(--accent-1); }
+
+  /* ─── BODY ────────────────────────────────────────────────────── */
+  .body { flex: 1; display: flex; overflow: hidden; position: relative; }
+
+  /* ─── SIDEBAR ─────────────────────────────────────────────────── */
+  .sidebar {
+    width: 220px; min-width: 220px;
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .sidebar-header {
+    padding: 12px 14px 8px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+  .sidebar-add {
+    width: 22px; height: 22px; border-radius: 4px;
+    background: transparent; border: 1px solid var(--border-light); color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    font-size: 15px; line-height: 1; transition: all 0.15s;
+  }
+  .sidebar-add:hover { background: var(--accent-glow); border-color: var(--accent-1); color: var(--accent-1); }
+
+  .file-tree { flex: 1; overflow-y: auto; padding: 6px 0; }
+  .file-tree::-webkit-scrollbar { width: 4px; }
+  .file-tree::-webkit-scrollbar-track { background: transparent; }
+  .file-tree::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 2px; }
+
+  .tree-folder { padding: 6px 14px 2px; display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 11.5px; font-weight: 600; letter-spacing: 0.03em; cursor: pointer; user-select: none; }
+  .tree-folder:hover { color: var(--text-secondary); }
+  .folder-icon { font-size: 12px; }
+  .folder-chevron { margin-left: auto; font-size: 9px; opacity: 0.5; transition: transform 0.15s; }
+
+  .tree-file {
+    padding: 5px 14px 5px 28px;
+    display: flex; align-items: center; gap: 7px;
+    cursor: pointer; border-radius: 0; color: var(--text-secondary); font-size: 12px;
+    transition: background 0.1s, color 0.1s; position: relative;
+    border-left: 2px solid transparent;
+  }
+  .tree-file:hover { background: var(--bg-hover); color: var(--text-primary); }
+  .tree-file.active {
+    background: var(--bg-active); color: var(--text-primary);
+    border-left-color: var(--accent-1);
+  }
+  .tree-file.active::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 2px; background: var(--accent-1);
+    box-shadow: 0 0 8px var(--accent-1);
+  }
+  .file-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .file-dot.green { background: var(--green); box-shadow: 0 0 4px var(--green); }
+  .file-dot.orange { background: var(--orange); box-shadow: 0 0 4px var(--orange); animation: pulse-dot 2s infinite; }
+  @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+
+  .sidebar-footer {
+    border-top: 1px solid var(--border);
+    padding: 10px 14px;
+  }
+  .branch-switcher {
+    background: var(--bg-elevated); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 6px 10px;
+    cursor: pointer; transition: border-color 0.15s;
+  }
+  .branch-switcher:hover { border-color: var(--accent-1); }
+  .branch-label { font-size: 10px; color: var(--text-muted); margin-bottom: 3px; }
+  .branch-name { font-size: 11.5px; color: #a5b4fc; display: flex; align-items: center; gap: 5px; }
+  .branch-name svg { opacity: 0.6; }
+  .master-tag {
+    margin-top: 4px; font-size: 10px; color: var(--text-muted);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .master-tag .lock { font-size: 9px; }
+
+  /* ─── MAIN EDITOR ──────────────────────────────────────────────── */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+  .editor-tabs {
+    height: 36px; min-height: 36px;
+    background: var(--bg-panel); border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-end; padding: 0 0 0 0; overflow-x: auto;
+  }
+  .editor-tab {
+    height: 36px; padding: 0 16px;
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12px; color: var(--text-muted); cursor: pointer;
+    border-bottom: 2px solid transparent; white-space: nowrap;
+    border-right: 1px solid var(--border); transition: all 0.15s;
+  }
+  .editor-tab:hover { color: var(--text-primary); }
+  .editor-tab.active { color: var(--text-primary); border-bottom-color: var(--accent-1); background: var(--bg-editor); }
+  .tab-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--orange); }
+
+  .editor-area { flex: 1; display: flex; overflow: hidden; position: relative; }
+
+  .code-editor-wrap { flex: 1; overflow: auto; background: var(--bg-editor); position: relative; }
+  .code-editor-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+  .code-editor-wrap::-webkit-scrollbar-track { background: transparent; }
+  .code-editor-wrap::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+
+  .code-block { display: flex; padding: 16px 0; min-height: 100%; }
+  .line-numbers { padding: 0 12px 0 16px; color: var(--text-muted); font-family: var(--font-mono); font-size: 12.5px; line-height: 22px; user-select: none; min-width: 48px; text-align: right; opacity: 0.5; position: relative; }
+  .line-num { position: relative; }
+  .lint-marker {
+    position: absolute; left: -10px; top: 50%; transform: translateY(-50%);
+    width: 7px; height: 7px; border-radius: 50%; background: var(--orange);
+    cursor: pointer; box-shadow: 0 0 6px var(--orange);
+  }
+  .lint-tooltip {
+    display: none; position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+    background: #1c1c2e; border: 1px solid var(--orange); border-radius: var(--radius-sm);
+    padding: 6px 10px; font-size: 11px; color: var(--text-primary); white-space: nowrap;
+    z-index: 200; box-shadow: 0 4px 16px rgba(0,0,0,0.5); margin-left: 8px;
+  }
+  .lint-marker:hover + .lint-tooltip,
+  .lint-tooltip:hover { display: block; }
+  .lint-marker-wrap { position: relative; display: inline-block; }
+
+  .code-content { flex: 1; padding: 0 24px 0 4px; font-family: var(--font-mono); font-size: 12.5px; line-height: 22px; white-space: pre; color: var(--text-code); }
+
+  /* SQL Syntax Colors */
+  .kw    { color: #c084fc; font-weight: 600; }
+  .kw2   { color: #818cf8; }
+  .fn    { color: #67e8f9; }
+  .str   { color: #86efac; }
+  .tbl   { color: #fcd34d; }
+  .alias { color: #e2e8f0; }
+  .cmt   { color: #4a4a6a; font-style: italic; }
+  .var   { color: #fb923c; }
+  .num   { color: #f472b6; }
+  .punct { color: #64748b; }
+
+  /* AI Assist Strip */
+  .ai-strip {
+    width: 40px; background: var(--bg-panel); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center; padding: 16px 0; gap: 12px;
+  }
+  .ai-btn {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.3);
+    color: #a78bfa; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; transition: all 0.15s; position: relative;
+  }
+  .ai-btn:hover { background: rgba(139,92,246,0.3); border-color: #8b5cf6; box-shadow: 0 0 12px rgba(139,92,246,0.4); transform: scale(1.08); }
+  .ai-tooltip-wrap { position: relative; }
+  .ai-tooltip {
+    display: none; position: absolute; right: calc(100% + 10px); top: 50%; transform: translateY(-50%);
+    background: #1c1c2e; border: 1px solid rgba(139,92,246,0.4);
+    border-radius: var(--radius); padding: 8px 12px; white-space: nowrap;
+    font-size: 11.5px; color: var(--text-primary); z-index: 300;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  }
+  .ai-tooltip-wrap:hover .ai-tooltip { display: block; }
+  .ai-tooltip strong { color: #a78bfa; display: block; margin-bottom: 3px; }
+
+  .strip-divider { width: 20px; height: 1px; background: var(--border); }
+
+  /* ─── BOTTOM PANEL ──────────────────────────────────────────────── */
+  .bottom-panel {
+    height: 210px; min-height: 210px;
+    background: var(--bg-panel); border-top: 1px solid var(--border);
+    display: flex; flex-direction: column;
+  }
+  .panel-tabs {
+    display: flex; align-items: center; border-bottom: 1px solid var(--border);
+    padding: 0 16px; height: 34px; gap: 0;
+  }
+  .panel-tab {
+    padding: 0 14px; height: 34px; display: flex; align-items: center;
+    font-size: 12px; color: var(--text-muted); cursor: pointer;
+    border-bottom: 2px solid transparent; transition: all 0.15s;
+  }
+  .panel-tab:hover { color: var(--text-primary); }
+  .panel-tab.active { color: var(--text-primary); border-bottom-color: var(--accent-1); }
+  .panel-content { flex: 1; overflow: auto; padding: 12px 16px; }
+  .panel-content::-webkit-scrollbar { width: 4px; }
+  .panel-content::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 2px; }
+
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* Test Result */
+  .result-status {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+    font-size: 12.5px; color: var(--text-secondary);
+  }
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 9px; border-radius: 20px; font-size: 11.5px; font-weight: 600;
+  }
+  .status-badge.success { background: var(--green-dim); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+  .status-badge.running { background: rgba(99,102,241,0.15); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3); }
+  .dot-anim { animation: blink 1s infinite; }
+  @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+  .result-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 11.5px; }
+  .result-table th { background: var(--bg-elevated); color: var(--text-muted); padding: 5px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid var(--border); }
+  .result-table td { padding: 4px 12px; color: var(--text-secondary); border-bottom: 1px solid rgba(37,37,56,0.5); }
+  .result-table tr:last-child td { border-bottom: none; }
+  .result-table tr:hover td { background: var(--bg-hover); color: var(--text-primary); }
+
+  /* Parse Result */
+  .parse-section { margin-bottom: 12px; }
+  .parse-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); margin-bottom: 6px; }
+  .tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-family: var(--font-mono);
+  }
+  .tag.output { background: var(--green-dim); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+  .tag.input { background: rgba(99,102,241,0.1); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.25); }
+  .tag .check { font-size: 10px; }
+
+  /* Commit History */
+  .commit-list { display: flex; flex-direction: column; gap: 2px; }
+  .commit-item {
+    display: flex; align-items: center; gap: 10px; padding: 5px 8px; border-radius: var(--radius-sm);
+    cursor: pointer; transition: background 0.1s;
+  }
+  .commit-item:hover { background: var(--bg-hover); }
+  .commit-hash { font-family: var(--font-mono); font-size: 11px; color: #818cf8; min-width: 56px; }
+  .commit-msg { flex: 1; font-size: 12px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .commit-item:hover .commit-msg { color: var(--text-primary); }
+  .commit-ai { font-size: 10px; background: rgba(139,92,246,0.15); color: #c4b5fd; border: 1px solid rgba(139,92,246,0.3); border-radius: 3px; padding: 1px 5px; white-space: nowrap; }
+  .commit-time { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+  .commit-item .diff-btn {
+    font-size: 10.5px; padding: 2px 7px; border-radius: 3px;
+    background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.3);
+    color: #a5b4fc; cursor: pointer; opacity: 0; transition: opacity 0.15s;
+    flex-shrink: 0;
+  }
+  .commit-item:hover .diff-btn { opacity: 1; }
+
+  /* ─── SIDE-BY-SIDE DIFF VIEW ────────────────────────────────────── */
+  .diff-view {
+    display: none; flex: 1; overflow: hidden; background: var(--bg-editor);
+    flex-direction: column;
+  }
+  .diff-view.active { display: flex; }
+  .diff-view-bar {
+    height: 34px; min-height: 34px; background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 14px; gap: 12px;
+  }
+  .diff-view-title { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+  .diff-commit-info { font-family: var(--font-mono); font-size: 11px; }
+  .diff-commit-hash { color: #818cf8; }
+  .diff-commit-msg { color: var(--text-secondary); }
+  .diff-close-btn {
+    margin-left: auto; padding: 3px 10px; border-radius: 3px;
+    background: var(--bg-hover); border: 1px solid var(--border-light);
+    color: var(--text-muted); font-size: 11.5px; cursor: pointer;
+    display: flex; align-items: center; gap: 5px; transition: all 0.15s;
+  }
+  .diff-close-btn:hover { color: var(--text-primary); border-color: var(--border-light); }
+
+  .diff-panels { flex: 1; display: flex; overflow: hidden; }
+  .diff-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .diff-panel + .diff-panel { border-left: 2px solid var(--border); }
+  .diff-panel-header {
+    height: 28px; min-height: 28px; padding: 0 12px;
+    background: var(--bg-panel); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px; font-size: 11px;
+  }
+  .diff-panel-label { font-family: var(--font-mono); font-size: 11px; }
+  .diff-panel-label.old { color: #fca5a5; }
+  .diff-panel-label.new { color: #a7f3d0; }
+  .diff-panel-branch { color: var(--text-muted); font-size: 10px; }
+  .diff-panel-scroll { flex: 1; overflow: auto; }
+  .diff-panel-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+  .diff-panel-scroll::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+
+  .sdiff-block { padding: 12px 0; font-family: var(--font-mono); font-size: 12px; }
+  .sdiff-line { display: flex; min-height: 21px; line-height: 21px; padding: 0 4px 0 0; }
+  .sdiff-num { width: 36px; text-align: right; padding-right: 10px; color: var(--text-muted); opacity: 0.45; user-select: none; flex-shrink: 0; font-size: 11px; }
+  .sdiff-text { flex: 1; padding: 0 12px; white-space: pre; color: var(--text-code); overflow: hidden; }
+  .sdiff-line.del { background: rgba(239,68,68,0.12); }
+  .sdiff-line.del .sdiff-text { color: #fca5a5; }
+  .sdiff-line.del .sdiff-num { color: var(--red); opacity: 0.6; }
+  .sdiff-line.add { background: rgba(16,185,129,0.1); }
+  .sdiff-line.add .sdiff-text { color: #a7f3d0; }
+  .sdiff-line.add .sdiff-num { color: var(--green); opacity: 0.6; }
+  .sdiff-line.empty { background: rgba(0,0,0,0.15); }
+  .sdiff-line.empty .sdiff-text { color: transparent; user-select: none; }
+  .sdiff-sep { padding: 4px 12px; font-size: 10px; color: var(--text-muted); background: rgba(99,102,241,0.05); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); letter-spacing: 0.05em; }
+
+  /* ─── DRAWER OVERLAY ────────────────────────────────────────────── */
+  .drawer-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px);
+    z-index: 500; opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+  .drawer-overlay.open { opacity: 1; pointer-events: all; }
+
+  .drawer {
+    position: fixed; top: 0; right: -500px; bottom: 0; width: 480px;
+    background: var(--bg-panel); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; z-index: 501;
+    transition: right 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow: -16px 0 48px rgba(0,0,0,0.5);
+  }
+  .drawer.open { right: 0; }
+
+  .drawer-header {
+    padding: 0 20px; height: 52px; min-height: 52px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border); background: var(--bg-elevated);
+  }
+  .drawer-title { font-size: 14px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+  .drawer-title-icon { width: 26px; height: 26px; border-radius: 6px; background: var(--accent-grad); display: flex; align-items: center; justify-content: center; }
+  .drawer-close {
+    width: 28px; height: 28px; border-radius: var(--radius-sm); background: transparent;
+    border: 1px solid var(--border-light); color: var(--text-muted); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+    transition: all 0.15s;
+  }
+  .drawer-close:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+  .drawer-body { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 16px; }
+  .drawer-body::-webkit-scrollbar { width: 4px; }
+  .drawer-body::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 2px; }
+
+  .drawer-section { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .section-head {
+    padding: 10px 14px; background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--text-muted); display: flex; align-items: center; gap: 6px;
+  }
+  .section-body { padding: 12px 14px; }
+
+  /* Diff View */
+  .diff-line { display: flex; align-items: stretch; font-family: var(--font-mono); font-size: 11.5px; line-height: 20px; border-radius: 2px; margin-bottom: 1px; }
+  .diff-num { width: 32px; text-align: right; padding-right: 10px; color: var(--text-muted); opacity: 0.5; user-select: none; flex-shrink: 0; }
+  .diff-sign { width: 16px; flex-shrink: 0; font-weight: 700; }
+  .diff-text { flex: 1; padding-left: 4px; }
+  .diff-add { background: rgba(16,185,129,0.1); }
+  .diff-add .diff-sign { color: var(--green); }
+  .diff-add .diff-text { color: #a7f3d0; }
+  .diff-del { background: rgba(239,68,68,0.1); }
+  .diff-del .diff-sign { color: var(--red); }
+  .diff-del .diff-text { color: #fca5a5; text-decoration: line-through; opacity: 0.7; }
+  .diff-ctx .diff-text { color: var(--text-muted); }
+
+  /* Dependency List */
+  .dep-output { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 8px 10px; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: var(--radius-sm); }
+  .dep-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .dep-badge.output { background: var(--green); color: #022c22; }
+  .dep-badge.upstream { background: rgba(99,102,241,0.3); color: #a5b4fc; }
+  .dep-table-name { font-family: var(--font-mono); font-size: 12px; color: var(--green); }
+
+  .dep-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; border-radius: var(--radius-sm); margin-bottom: 4px;
+    background: var(--bg-hover); border: 1px solid var(--border);
+    transition: border-color 0.15s;
+  }
+  .dep-item:hover { border-color: var(--border-light); }
+  .dep-status { width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; }
+  .dep-status.ok { background: var(--green-dim); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+  .dep-status.warn { background: var(--orange-dim); color: var(--orange); border: 1px solid rgba(245,158,11,0.3); }
+  .dep-source { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-secondary); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dep-arrow { color: var(--text-muted); font-size: 10px; flex-shrink: 0; }
+  .dep-target { font-size: 11.5px; color: var(--text-secondary); }
+  .dep-target.matched { color: var(--green); }
+  .dep-target.unmatched { color: var(--orange); }
+  .dep-action {
+    font-size: 11px; padding: 2px 8px; border-radius: 3px;
+    background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3);
+    color: var(--orange); cursor: pointer; flex-shrink: 0; transition: all 0.15s;
+  }
+  .dep-action:hover { background: rgba(245,158,11,0.25); }
+
+  .dep-search-inline {
+    margin-top: 6px; padding: 8px;
+    background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); display: none;
+  }
+  .dep-search-inline.open { display: block; }
+  .dep-search-input {
+    width: 100%; padding: 5px 10px; border-radius: var(--radius-sm);
+    background: var(--bg-elevated); border: 1px solid var(--border-light);
+    color: var(--text-primary); font-size: 12px; font-family: var(--font-ui);
+    outline: none; transition: border-color 0.15s;
+  }
+  .dep-search-input:focus { border-color: var(--accent-1); box-shadow: 0 0 0 2px var(--accent-glow); }
+  .dep-search-hint { margin-top: 5px; font-size: 11px; color: var(--text-muted); }
+
+  /* Merge Strategy */
+  .radio-group { display: flex; gap: 8px; }
+  .radio-opt {
+    flex: 1; padding: 8px 12px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--bg-hover);
+    cursor: pointer; display: flex; align-items: center; gap: 8px;
+    font-size: 12.5px; color: var(--text-secondary); transition: all 0.15s;
+  }
+  .radio-opt:hover { border-color: var(--border-light); color: var(--text-primary); }
+  .radio-opt.selected { border-color: var(--accent-1); background: rgba(99,102,241,0.1); color: var(--text-primary); }
+  .radio-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border-light); transition: all 0.15s; flex-shrink: 0; }
+  .radio-opt.selected .radio-dot { border-color: var(--accent-1); background: var(--accent-1); box-shadow: 0 0 6px var(--accent-1); }
+
+  /* Form Fields */
+  .form-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .form-row:last-child { margin-bottom: 0; }
+  .form-label { font-size: 11.5px; color: var(--text-muted); min-width: 64px; flex-shrink: 0; }
+  .form-input {
+    flex: 1; padding: 6px 10px; border-radius: var(--radius-sm);
+    background: var(--bg-hover); border: 1px solid var(--border);
+    color: var(--text-primary); font-size: 12.5px; font-family: var(--font-mono);
+    outline: none; transition: border-color 0.15s;
+  }
+  .form-input:focus { border-color: var(--accent-1); box-shadow: 0 0 0 2px var(--accent-glow); }
+  .form-select {
+    flex: 1; padding: 6px 10px; border-radius: var(--radius-sm);
+    background: var(--bg-hover); border: 1px solid var(--border);
+    color: var(--text-primary); font-size: 12.5px; font-family: var(--font-ui);
+    outline: none; cursor: pointer; transition: border-color 0.15s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%235a5a7a' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center;
+  }
+  .form-select:focus { border-color: var(--accent-1); }
+  .cron-hint { font-size: 11px; color: var(--green); margin-top: 3px; }
+
+  .branch-flow { display: flex; align-items: center; gap: 8px; font-size: 12px; font-family: var(--font-mono); }
+  .branch-from { color: #a5b4fc; background: rgba(99,102,241,0.1); padding: 2px 8px; border-radius: 3px; }
+  .branch-flow-arrow { color: var(--text-muted); }
+  .branch-to { color: var(--green); background: var(--green-dim); padding: 2px 8px; border-radius: 3px; }
+
+  .form-textarea {
+    width: 100%; padding: 7px 10px; border-radius: var(--radius-sm);
+    background: var(--bg-hover); border: 1px solid var(--border);
+    color: var(--text-primary); font-size: 12.5px; font-family: var(--font-ui);
+    outline: none; resize: none; min-height: 60px; transition: border-color 0.15s;
+  }
+  .form-textarea:focus { border-color: var(--accent-1); box-shadow: 0 0 0 2px var(--accent-glow); }
+
+  /* Drawer Footer */
+  .drawer-footer {
+    padding: 14px 20px; border-top: 1px solid var(--border);
+    display: flex; gap: 10px; background: var(--bg-panel);
+  }
+  .btn-cancel { flex: 1; padding: 10px; background: var(--bg-hover); border: 1px solid var(--border); color: var(--text-secondary); border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; font-family: var(--font-ui); transition: all 0.15s; }
+  .btn-cancel:hover { border-color: var(--border-light); color: var(--text-primary); }
+  .btn-deploy { flex: 2; padding: 10px; background: var(--accent-grad); border: none; color: #fff; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; font-weight: 600; font-family: var(--font-ui); box-shadow: 0 2px 16px rgba(99,102,241,0.4); transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn-deploy:hover { box-shadow: 0 4px 24px rgba(99,102,241,0.6); filter: brightness(1.1); }
+  .btn-deploy:active { transform: scale(0.98); }
+
+  /* ─── TOAST ─────────────────────────────────────────────────────── */
+  .toast-wrap { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); z-index: 1000; pointer-events: none; }
+  .toast {
+    background: var(--bg-elevated); border: 1px solid var(--green);
+    border-radius: var(--radius); padding: 12px 20px;
+    font-size: 13px; color: var(--text-primary);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(16,185,129,0.2);
+    display: flex; align-items: center; gap: 10px;
+    opacity: 0; transform: translateY(12px);
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast-icon { font-size: 16px; }
+  .toast strong { color: var(--green); }
+
+  /* ─── SPINNER ────────────────────────────────────────────────────── */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+
+  /* Scrollbar global */
+  * { scrollbar-width: thin; scrollbar-color: var(--border-light) transparent; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── TOP BAR ── -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="logo">
+        <div class="logo-icon">DS</div>
+        <span class="logo-text">SQL<span class="logo-sep">·</span>Studio</span>
+      </div>
+      <div class="project-select" title="切换项目">
+        <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M2 4h12v2H2V4zm0 3h12v2H2V7zm0 3h8v2H2v-2z"/></svg>
+        dw_conan
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+      </div>
+    </div>
+
+    <div class="topbar-center">
+      <div class="breadcrumb">
+        <span class="breadcrumb-item">dw_conan</span>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-item active">dwd_order_item_da.hql</span>
+      </div>
+      <div class="branch-badge">
+        <span class="dot"></span>
+        user/wangliang/dwd-order
+      </div>
+      <span class="ahead-tag">↑2 ahead</span>
+    </div>
+
+    <div class="topbar-right">
+      <button class="btn btn-outline" id="testBtn" onclick="startTest()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        测试运行
+      </button>
+      <button class="btn btn-primary" onclick="openDrawer()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+        发布上线
+      </button>
+      <div class="avatar" title="wangliang">WL</div>
+    </div>
+  </div>
+
+  <!-- ── BODY ── -->
+  <div class="body">
+
+    <!-- ── SIDEBAR ── -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">SQL 作业</span>
+        <div class="sidebar-add" title="新建 SQL 文件">+</div>
+      </div>
+
+      <div class="file-tree">
+        <div class="tree-folder" onclick="toggleFolder(this)">
+          <span class="folder-icon">▸</span>
+          <span>dw_conan</span>
+          <span class="folder-chevron">▸</span>
+        </div>
+        <div id="folder-conan">
+          <div class="tree-file active" onclick="selectFile(this)">
+            <span class="file-dot green"></span>
+            dwd_order_item_da.hql
+          </div>
+          <div class="tree-file" onclick="selectFile(this)">
+            <span class="file-dot green"></span>
+            dwd_user_profile_da.hql
+          </div>
+          <div class="tree-file" onclick="selectFile(this)">
+            <span class="file-dot orange"></span>
+            dwd_payment_flow_da.hql
+          </div>
+        </div>
+        <div class="tree-folder" onclick="toggleFolder(this)">
+          <span class="folder-icon">▸</span>
+          <span>dw_marketing</span>
+          <span class="folder-chevron">▸</span>
+        </div>
+        <div id="folder-marketing">
+          <div class="tree-file" onclick="selectFile(this)">
+            <span class="file-dot green"></span>
+            ads_channel_report_da.hql
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="branch-switcher">
+          <div class="branch-label">当前分支</div>
+          <div class="branch-name">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 01-9 9"/></svg>
+            user/wangliang/dwd-order
+          </div>
+          <div class="master-tag">
+            <span class="lock">🔒</span>
+            master = 线上只读
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MAIN ── -->
+    <div class="main">
+      <div class="editor-tabs">
+        <div class="editor-tab active">
+          <span class="tab-dot"></span>
+          dwd_order_item_da.hql
+        </div>
+      </div>
+
+      <div class="editor-area">
+        <div class="code-editor-wrap" id="codeEditorWrap">
+          <div class="code-block">
+            <div class="line-numbers" id="lineNums"></div>
+            <div class="code-content" id="codeContent"></div>
+          </div>
+        </div>
+
+        <!-- Side-by-side diff view (shown when clicking commit compare) -->
+        <div class="diff-view" id="diffView">
+          <div class="diff-view-bar">
+            <div class="diff-view-title">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18"/><rect x="14" y="3" width="7" height="18"/></svg>
+              版本对比
+            </div>
+            <span class="diff-commit-info">
+              <span class="diff-commit-hash" id="diffHash">a3f82c1</span>
+              <span style="color:var(--text-muted);margin:0 6px;">vs</span>
+              <span style="color:var(--green)">HEAD (当前)</span>
+              <span style="color:var(--text-muted);margin-left:10px;" id="diffMsg">添加 discount_amount 字段，修正金额计算逻辑</span>
+            </span>
+            <div class="diff-close-btn" onclick="closeDiff()">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              关闭对比
+            </div>
+          </div>
+          <div class="diff-panels">
+            <!-- Left: old -->
+            <div class="diff-panel">
+              <div class="diff-panel-header">
+                <span class="diff-panel-label old">旧版本</span>
+                <span class="diff-panel-branch" id="diffOldLabel">a3f82c1 · 1 小时前</span>
+              </div>
+              <div class="diff-panel-scroll">
+                <div class="sdiff-block" id="diffOld"></div>
+              </div>
+            </div>
+            <!-- Right: new -->
+            <div class="diff-panel">
+              <div class="diff-panel-header">
+                <span class="diff-panel-label new">当前版本</span>
+                <span class="diff-panel-branch">HEAD · user/wangliang/dwd-order</span>
+              </div>
+              <div class="diff-panel-scroll">
+                <div class="sdiff-block" id="diffNew"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Strip -->
+        <div class="ai-strip">
+          <div class="ai-tooltip-wrap">
+            <div class="ai-btn" title="AI 助手">✦</div>
+            <div class="ai-tooltip">
+              <strong>AI SQL 助手</strong>
+              生成 SQL 草稿 · 解释依赖<br>修复错误 · 生成发布说明
+            </div>
+          </div>
+          <div class="strip-divider"></div>
+          <div class="ai-tooltip-wrap">
+            <div class="ai-btn" style="background:rgba(56,189,248,0.1);border-color:rgba(56,189,248,0.3);color:#7dd3fc;" onclick="formatSQL()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+            </div>
+            <div class="ai-tooltip" style="border-color:rgba(56,189,248,0.4);">
+              <strong style="color:#7dd3fc;">格式化 SQL</strong>
+              自动对齐关键字、缩进、换行<br>快捷键：Shift+Alt+F
+            </div>
+          </div>
+          <div class="ai-tooltip-wrap">
+            <div class="ai-btn" style="background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.3);color:#6ee7b7;" onclick="showLineage()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            </div>
+            <div class="ai-tooltip" style="border-color:rgba(16,185,129,0.4);">
+              <strong style="color:#6ee7b7;">查看血缘图</strong>
+              展示本 SQL 的上下游表依赖<br>跳转至血缘拓扑视图
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Panel -->
+      <div class="bottom-panel">
+        <div class="panel-tabs">
+          <div class="panel-tab active" onclick="switchTab(this,'test')">测试结果</div>
+          <div class="panel-tab" onclick="switchTab(this,'parse')">解析结果</div>
+          <div class="panel-tab" onclick="switchTab(this,'history')">历史版本</div>
+        </div>
+        <div class="panel-content">
+
+          <!-- Test Result -->
+          <div class="tab-pane active" id="tab-test">
+            <div class="result-status">
+              <span class="status-badge success">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                执行成功
+              </span>
+              <span>耗时 1.2s</span>
+              <span style="color:var(--text-muted)">·</span>
+              <span>返回 <strong style="color:var(--text-primary)">1,000</strong> 行（已截断）</span>
+            </div>
+            <table class="result-table">
+              <thead>
+                <tr>
+                  <th>order_id</th><th>item_id</th><th>sku_id</th><th>quantity</th><th>unit_price</th><th>actual_amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>ORD20240101001</td><td>ITM00192</td><td>SKU8820</td><td>2</td><td>199.00</td><td>378.10</td></tr>
+                <tr><td>ORD20240101002</td><td>ITM00193</td><td>SKU4431</td><td>1</td><td>89.00</td><td>84.55</td></tr>
+                <tr><td>ORD20240101003</td><td>ITM00194</td><td>SKU2210</td><td>3</td><td>45.00</td><td>121.50</td></tr>
+                <tr><td>ORD20240101004</td><td>ITM00195</td><td>SKU9973</td><td>1</td><td>320.00</td><td>304.00</td></tr>
+                <tr><td>ORD20240101005</td><td>ITM00196</td><td>SKU1156</td><td>4</td><td>22.50</td><td>81.00</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Parse Result -->
+          <div class="tab-pane" id="tab-parse">
+            <div class="parse-section">
+              <div class="parse-label">产出表</div>
+              <div class="tag-list">
+                <span class="tag output"><span class="check">▶</span> dw_conan.dwd_order_item_da</span>
+              </div>
+            </div>
+            <div class="parse-section">
+              <div class="parse-label">上游依赖表</div>
+              <div class="tag-list">
+                <span class="tag input"><span class="check" style="color:var(--green)">✓</span> ods_conan.ods_order_item_df</span>
+                <span class="tag input"><span class="check" style="color:var(--green)">✓</span> ods_conan.ods_order_df</span>
+                <span class="tag input"><span class="check" style="color:var(--green)">✓</span> dim_conan.dim_sku_df</span>
+              </div>
+            </div>
+            <div class="parse-section">
+              <div class="parse-label">变量参数</div>
+              <div class="tag-list">
+                <span class="tag" style="background:rgba(251,146,60,0.1);color:#fb923c;border:1px solid rgba(251,146,60,0.3);">${dt}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- History -->
+          <div class="tab-pane" id="tab-history">
+            <div class="commit-list">
+              <div class="commit-item" onclick="openDiff('a3f82c1','添加 discount_amount 字段，修正金额计算逻辑')">
+                <span class="commit-hash">a3f82c1</span>
+                <span class="commit-msg">添加 discount_amount 字段，修正金额计算逻辑</span>
+                <span class="diff-btn">对比 ↕</span>
+                <span class="commit-time">2 分钟前</span>
+              </div>
+              <div class="commit-item" onclick="openDiff('9e14b07','新增 channel_id 关联字段')">
+                <span class="commit-hash">9e14b07</span>
+                <span class="commit-msg">新增 channel_id 关联字段</span>
+                <span class="commit-ai">[AI-assisted]</span>
+                <span class="diff-btn">对比 ↕</span>
+                <span class="commit-time">1 小时前</span>
+              </div>
+              <div class="commit-item" onclick="openDiff('c2d91f3','初始创建 dwd_order_item_da 作业')">
+                <span class="commit-hash">c2d91f3</span>
+                <span class="commit-msg">初始创建 dwd_order_item_da 作业</span>
+                <span class="diff-btn">对比 ↕</span>
+                <span class="commit-time">昨天</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── DRAWER OVERLAY ── -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div class="drawer-title">
+      <div class="drawer-title-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+      </div>
+      发布上线
+    </div>
+    <div class="drawer-close" onclick="closeDrawer()">✕</div>
+  </div>
+
+  <div class="drawer-body">
+
+    <!-- Section 1: SQL Diff -->
+    <div class="drawer-section">
+      <div class="section-head">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        SQL 变更预览
+        <span style="margin-left:auto;font-size:10px;color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0;">个人分支 vs master</span>
+      </div>
+      <div class="section-body" style="padding:10px;">
+        <div class="diff-line diff-ctx"><span class="diff-num">8</span><span class="diff-sign"> </span><span class="diff-text">    oi.unit_price,</span></div>
+        <div class="diff-line diff-del"><span class="diff-num">9</span><span class="diff-sign">-</span><span class="diff-text">    oi.total_amount,</span></div>
+        <div class="diff-line diff-add"><span class="diff-num">9</span><span class="diff-sign">+</span><span class="diff-text">    oi.discount_amount,</span></div>
+        <div class="diff-line diff-add"><span class="diff-num">10</span><span class="diff-sign">+</span><span class="diff-text">    oi.actual_amount,</span></div>
+        <div class="diff-line diff-add"><span class="diff-num">11</span><span class="diff-sign">+</span><span class="diff-text">    o.channel_id,</span></div>
+        <div class="diff-line diff-ctx"><span class="diff-num">12</span><span class="diff-sign"> </span><span class="diff-text">    o.create_time,</span></div>
+      </div>
+    </div>
+
+    <!-- Section 2: Dependencies -->
+    <div class="drawer-section">
+      <div class="section-head">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        依赖解析
+      </div>
+      <div class="section-body">
+        <div class="dep-output">
+          <span class="dep-badge output">产出</span>
+          <span class="dep-table-name">dw_conan.dwd_order_item_da</span>
+        </div>
+
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">上游依赖</div>
+
+        <div class="dep-item">
+          <div class="dep-status ok">✓</div>
+          <span class="dep-source">ods_order_item_df</span>
+          <span class="dep-arrow">→</span>
+          <span class="dep-target matched">ods_order_item_ingestion</span>
+        </div>
+        <div class="dep-item">
+          <div class="dep-status ok">✓</div>
+          <span class="dep-source">ods_order_df</span>
+          <span class="dep-arrow">→</span>
+          <span class="dep-target matched">ods_order_ingestion</span>
+        </div>
+        <div class="dep-item" id="unknownDepItem">
+          <div class="dep-status warn">!</div>
+          <span class="dep-source">dim_sku_df</span>
+          <span class="dep-arrow">→</span>
+          <span class="dep-target unmatched">未知来源</span>
+          <span class="dep-action" onclick="toggleDepSearch(event)">手动指定</span>
+        </div>
+        <div class="dep-search-inline" id="depSearchBox">
+          <input class="dep-search-input" type="text" placeholder="搜索已有任务，如 dim_sku_ingestion..." autofocus oninput="handleDepSearch(this)">
+          <div class="dep-search-hint">输入任务名进行模糊匹配</div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">合并策略</div>
+          <div class="radio-group">
+            <div class="radio-opt selected" onclick="selectRadio(this)">
+              <div class="radio-dot"></div>
+              覆盖依赖
+            </div>
+            <div class="radio-opt" onclick="selectRadio(this)">
+              <div class="radio-dot"></div>
+              追加依赖
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Schedule -->
+    <div class="drawer-section">
+      <div class="section-head">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        调度配置
+      </div>
+      <div class="section-body">
+        <div class="form-row">
+          <span class="form-label">Cron</span>
+          <div style="flex:1;">
+            <input class="form-input" type="text" value="0 2 * * *" id="cronInput" oninput="updateCronHint(this)">
+            <div class="cron-hint" id="cronHint">每天凌晨 2:00 执行</div>
+          </div>
+        </div>
+        <div class="form-row">
+          <span class="form-label">数据源</span>
+          <select class="form-select">
+            <option>hive_prod</option>
+            <option>hive_test</option>
+            <option>spark_prod</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <span class="form-label">Worker 组</span>
+          <select class="form-select">
+            <option>default</option>
+            <option>hdp-worker-group</option>
+            <option>spark-worker-group</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <span class="form-label">租户</span>
+          <select class="form-select">
+            <option>hdfs</option>
+            <option>hive</option>
+            <option>root</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <span class="form-label">环境</span>
+          <select class="form-select">
+            <option>prod-env（HDP 3.1）</option>
+            <option>test-env（HDP 3.1 测试）</option>
+            <option>不指定</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <span class="form-label">优先级</span>
+          <select class="form-select">
+            <option>MEDIUM（默认）</option>
+            <option>HIGHEST</option>
+            <option>HIGH</option>
+            <option>LOW</option>
+            <option>LOWEST</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <span class="form-label">执行策略</span>
+          <select class="form-select" title="同一 workflow 并发触发时的处理方式">
+            <option>PARALLEL — 并行（默认）</option>
+            <option>SERIAL_WAIT — 串行等待</option>
+            <option>SERIAL_DISCARD — 串行丢弃</option>
+            <option>SERIAL_PRIORITY — 串行优先</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <span class="form-label">失败策略</span>
+          <div style="display:flex;gap:8px;flex:1;">
+            <div class="radio-opt selected" onclick="selectRadio(this)" style="flex:1;padding:5px 10px;">
+              <div class="radio-dot"></div>结束（END）
+            </div>
+            <div class="radio-opt" onclick="selectRadio(this)" style="flex:1;padding:5px 10px;">
+              <div class="radio-dot"></div>继续（CONTINUE）
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3.5: Alert -->
+    <div class="drawer-section">
+      <div class="section-head">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+        告警配置
+      </div>
+      <div class="section-body">
+        <div class="form-row">
+          <span class="form-label">告警组</span>
+          <select class="form-select">
+            <option>dw_conan_alert</option>
+            <option>default_alert</option>
+            <option>oncall_group</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <span class="form-label">通知策略</span>
+          <select class="form-select">
+            <option>失败时发送</option>
+            <option>成功时发送</option>
+            <option>全部发送</option>
+            <option>不发送</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <span class="form-label">超时告警</span>
+          <div style="display:flex;align-items:center;gap:10px;flex:1;">
+            <input class="form-input" type="number" value="120" style="flex:none;width:70px;">
+            <span style="font-size:12px;color:var(--text-muted);">分钟（0 = 不限制）</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3.8: Global Params -->
+    <div class="drawer-section">
+      <div class="section-head">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14"/><path d="M4.93 4.93a10 10 0 000 14.14"/></svg>
+        全局变量
+        <span style="margin-left:auto;font-size:10px;color:var(--green);font-weight:400;text-transform:none;letter-spacing:0;">从 SQL 解析出 1 个变量</span>
+      </div>
+      <div class="section-body" style="padding:10px 14px;">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">SQL 中检测到 <code style="color:var(--orange);background:rgba(251,146,60,0.1);padding:1px 5px;border-radius:3px;">${'{'}dt{'}'}</code>，已自动映射为全局变量</div>
+        <div style="display:grid;grid-template-columns:1fr 60px 90px 1fr;gap:5px;font-size:11px;color:var(--text-muted);margin-bottom:5px;padding:0 2px;">
+          <span>变量名</span><span>方向</span><span>类型</span><span>默认值</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 60px 90px 1fr;gap:5px;align-items:center;">
+          <input class="form-input" value="dt" style="font-family:var(--font-mono);font-size:12px;">
+          <select class="form-select" style="font-size:11px;padding:5px 6px;"><option>IN</option><option>OUT</option></select>
+          <select class="form-select" style="font-size:11px;padding:5px 6px;"><option>VARCHAR</option><option>DATE</option><option>INTEGER</option></select>
+          <input class="form-input" placeholder="${'{'}business_date{'}'}" style="font-size:11.5px;">
+        </div>
+        <div style="margin-top:8px;">
+          <span style="font-size:11px;color:var(--accent-1);cursor:pointer;">+ 手动添加变量</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 4: Deploy Info -->
+    <div class="drawer-section">
+      <div class="section-head">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        发布信息
+      </div>
+      <div class="section-body">
+        <div class="form-row">
+          <span class="form-label">发布分支</span>
+          <div class="branch-flow">
+            <span class="branch-from">user/wangliang/dwd-order</span>
+            <span class="branch-flow-arrow">→</span>
+            <span class="branch-to">master</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <span class="form-label">负责人</span>
+          <input class="form-input" type="text" value="wangliang" style="flex:none;width:120px;">
+        </div>
+        <div class="form-row" style="align-items:flex-start;">
+          <span class="form-label" style="padding-top:7px;">发布说明</span>
+          <textarea class="form-textarea" placeholder="描述本次变更，如：新增 discount_amount 和 channel_id 字段，修正金额口径"></textarea>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="drawer-footer">
+    <button class="btn-cancel" onclick="closeDrawer()">取消</button>
+    <button class="btn-deploy" onclick="confirmDeploy()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+      确认发布
+    </button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-wrap">
+  <div class="toast" id="toast">
+    <span class="toast-icon">✦</span>
+    <span><strong>发布成功</strong> · dwd_order_item_da workflow 已上线，可在工作流管理页查看</span>
+  </div>
+</div>
+
+<script>
+  // ── CODE CONTENT ──────────────────────────────────────────────────
+  const SQL_LINES = [
+    `<span class="cmt">-- @job: dwd_order_item_da</span>`,
+    `<span class="cmt">-- @schedule: 0 2 * * *</span>`,
+    `<span class="cmt">-- @owner: wangliang</span>`,
+    ``,
+    `<span class="kw">INSERT OVERWRITE TABLE</span> <span class="tbl">dw_conan.dwd_order_item_da</span>`,
+    `<span class="kw">PARTITION</span> <span class="punct">(</span>dt <span class="punct">=</span> <span class="var">'${'{'}dt{'}'}'</span><span class="punct">)</span>`,
+    `<span class="kw">SELECT</span>`,
+    `    oi<span class="punct">.</span>order_id<span class="punct">,</span>`,
+    `    oi<span class="punct">.</span>item_id<span class="punct">,</span>`,
+    `    oi<span class="punct">.</span>sku_id<span class="punct">,</span>`,
+    `    oi<span class="punct">.</span>quantity<span class="punct">,</span>`,
+    `    oi<span class="punct">.</span>unit_price<span class="punct">,</span>`,
+    `    oi<span class="punct">.</span>discount_amount<span class="punct">,</span>`,
+    `    oi<span class="punct">.</span>actual_amount<span class="punct">,</span>`,
+    `    o<span class="punct">.</span>user_id<span class="punct">,</span>`,
+    `    o<span class="punct">.</span>channel_id<span class="punct">,</span>`,
+    `    o<span class="punct">.</span>create_time<span class="punct">,</span>`,
+    `    s<span class="punct">.</span>sku_name<span class="punct">,</span>`,
+    `    s<span class="punct">.</span>category_id`,
+    `<span class="kw">FROM</span> <span class="tbl">ods_conan.ods_order_item_df</span> <span class="alias">oi</span>`,
+    `<span class="kw2">JOIN</span> <span class="tbl">ods_conan.ods_order_df</span> <span class="alias">o</span>`,
+    `    <span class="kw2">ON</span> oi<span class="punct">.</span>order_id <span class="punct">=</span> o<span class="punct">.</span>order_id`,
+    `<span class="kw2">LEFT JOIN</span> <span class="tbl">dim_conan.dim_sku_df</span> <span class="alias">s</span>`,
+    `    <span class="kw2">ON</span> oi<span class="punct">.</span>sku_id <span class="punct">=</span> s<span class="punct">.</span>sku_id`,
+    `<span class="kw">WHERE</span> o<span class="punct">.</span>dt <span class="punct">=</span> <span class="var">'${'{'}dt{'}'}'</span>`,
+    `  <span class="kw2">AND</span> o<span class="punct">.</span>is_deleted <span class="punct">=</span> <span class="num">0</span>`,
+  ];
+
+  const LINT_LINE = 13; // 1-indexed: line 13 (discount_amount) — display as warning
+
+  function buildEditor() {
+    const nums = document.getElementById('lineNums');
+    const code = document.getElementById('codeContent');
+    let numsHtml = '';
+    let codeHtml = '';
+    SQL_LINES.forEach((line, i) => {
+      const n = i + 1;
+      if (n === LINT_LINE) {
+        numsHtml += `<div class="line-num"><span class="lint-marker-wrap"><span class="lint-marker" id="lintMarker"></span><span class="lint-tooltip">字段 discount_amount 在 dim_sku_df 中不存在，已从 oi 取值</span></span>${n}</div>`;
+      } else {
+        numsHtml += `<div class="line-num">${n}</div>`;
+      }
+      codeHtml += `<div>${line || ' '}</div>`;
+    });
+    nums.innerHTML = numsHtml;
+    code.innerHTML = codeHtml;
+  }
+  buildEditor();
+
+  // ── FILE TREE ─────────────────────────────────────────────────────
+  function selectFile(el) {
+    document.querySelectorAll('.tree-file').forEach(f => f.classList.remove('active'));
+    el.classList.add('active');
+  }
+  function toggleFolder(el) {
+    const chev = el.querySelector('.folder-chevron');
+    const icon = el.querySelector('.folder-icon');
+    const folderId = el.textContent.trim().includes('conan') ? 'folder-conan' : 'folder-marketing';
+    const folder = document.getElementById(folderId);
+    const isOpen = folder.style.display !== 'none';
+    folder.style.display = isOpen ? 'none' : '';
+    chev.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
+  }
+
+  // ── PANEL TABS ────────────────────────────────────────────────────
+  function switchTab(tabEl, id) {
+    document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    tabEl.classList.add('active');
+    document.getElementById('tab-' + id).classList.add('active');
+  }
+
+  // ── TEST RUN ──────────────────────────────────────────────────────
+  function startTest() {
+    const btn = document.getElementById('testBtn');
+    btn.classList.add('loading');
+    btn.innerHTML = '<span class="spinner"></span> 运行中…';
+    setTimeout(() => {
+      btn.classList.remove('loading');
+      btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>测试运行`;
+      // Switch to test result tab
+      document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      document.querySelector('.panel-tab').classList.add('active');
+      document.getElementById('tab-test').classList.add('active');
+    }, 1500);
+  }
+
+  // ── DRAWER ────────────────────────────────────────────────────────
+  function openDrawer() {
+    document.getElementById('drawer').classList.add('open');
+    document.getElementById('drawerOverlay').classList.add('open');
+  }
+  function closeDrawer() {
+    document.getElementById('drawer').classList.remove('open');
+    document.getElementById('drawerOverlay').classList.remove('open');
+  }
+
+  // ── DEPLOY ───────────────────────────────────────────────────────
+  function confirmDeploy() {
+    const btn = document.querySelector('.btn-deploy');
+    btn.innerHTML = '<span class="spinner"></span> 发布中…';
+    btn.style.pointerEvents = 'none';
+    setTimeout(() => {
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>确认发布`;
+      btn.style.pointerEvents = '';
+      closeDrawer();
+      showToast();
+    }, 1800);
+  }
+
+  // ── TOAST ─────────────────────────────────────────────────────────
+  function showToast() {
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 4000);
+  }
+
+  // ── RADIO ─────────────────────────────────────────────────────────
+  function selectRadio(el) {
+    el.parentElement.querySelectorAll('.radio-opt').forEach(r => r.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  // ── DEP SEARCH ───────────────────────────────────────────────────
+  function toggleDepSearch(e) {
+    e.stopPropagation();
+    const box = document.getElementById('depSearchBox');
+    box.classList.toggle('open');
+    if (box.classList.contains('open')) {
+      box.querySelector('input').focus();
+    }
+  }
+  function handleDepSearch(input) {
+    const hint = input.nextElementSibling;
+    if (input.value.length > 0) {
+      hint.innerHTML = `匹配到: <span style="color:var(--green)">dim_sku_ingestion</span> · 点击确认`;
+      hint.style.cursor = 'pointer';
+      hint.onclick = () => {
+        const item = document.getElementById('unknownDepItem');
+        item.querySelector('.dep-status').className = 'dep-status ok';
+        item.querySelector('.dep-status').textContent = '✓';
+        item.querySelector('.dep-target').className = 'dep-target matched';
+        item.querySelector('.dep-target').textContent = 'dim_sku_ingestion';
+        item.querySelector('.dep-action').remove();
+        document.getElementById('depSearchBox').classList.remove('open');
+      };
+    } else {
+      hint.innerHTML = '输入任务名进行模糊匹配';
+      hint.onclick = null;
+    }
+  }
+
+  // ── FORMAT / LINEAGE ─────────────────────────────────────────────
+  function formatSQL() {
+    const toast = document.getElementById('toast');
+    toast.querySelector('span:last-child').innerHTML = '<strong>格式化完成</strong> · SQL 已自动对齐关键字和缩进';
+    toast.querySelector('.toast-icon').textContent = '✦';
+    toast.style.borderColor = 'var(--blue)';
+    toast.classList.add('show');
+    setTimeout(() => { toast.classList.remove('show'); toast.style.borderColor = 'var(--green)'; }, 2500);
+  }
+  function showLineage() {
+    const toast = document.getElementById('toast');
+    toast.querySelector('span:last-child').innerHTML = '<strong>血缘图</strong> · 跳转到 dwd_order_item_da 的上下游血缘视图';
+    toast.querySelector('.toast-icon').textContent = '⬡';
+    toast.style.borderColor = 'var(--green)';
+    toast.classList.add('show');
+    setTimeout(() => { toast.classList.remove('show'); }, 2500);
+  }
+
+  // ── SIDE-BY-SIDE DIFF ─────────────────────────────────────────────
+  const DIFF_DATA = {
+    'a3f82c1': {
+      label: 'a3f82c1 · 2 分钟前',
+      old: [
+        { t: 'ctx', n: 1,  code: '-- @job: dwd_order_item_da' },
+        { t: 'ctx', n: 2,  code: '-- @schedule: 0 2 * * *' },
+        { t: 'ctx', n: 3,  code: '-- @owner: wangliang' },
+        { t: 'ctx', n: 4,  code: '' },
+        { t: 'ctx', n: 5,  code: 'INSERT OVERWRITE TABLE dw_conan.dwd_order_item_da' },
+        { t: 'sep' },
+        { t: 'ctx', n: 11, code: '    oi.unit_price,' },
+        { t: 'del', n: 12, code: '    oi.total_amount,' },
+        { t: 'emp' },
+        { t: 'emp' },
+        { t: 'ctx', n: 13, code: '    o.user_id,' },
+        { t: 'del', n: 14, code: '    o.create_time,' },
+        { t: 'ctx', n: 15, code: '' },
+      ],
+      new: [
+        { t: 'ctx', n: 1,  code: '-- @job: dwd_order_item_da' },
+        { t: 'ctx', n: 2,  code: '-- @schedule: 0 2 * * *' },
+        { t: 'ctx', n: 3,  code: '-- @owner: wangliang' },
+        { t: 'ctx', n: 4,  code: '' },
+        { t: 'ctx', n: 5,  code: 'INSERT OVERWRITE TABLE dw_conan.dwd_order_item_da' },
+        { t: 'sep' },
+        { t: 'ctx', n: 11, code: '    oi.unit_price,' },
+        { t: 'add', n: 12, code: '    oi.discount_amount,' },
+        { t: 'add', n: 13, code: '    oi.actual_amount,' },
+        { t: 'add', n: 14, code: '    o.channel_id,' },
+        { t: 'ctx', n: 15, code: '    o.user_id,' },
+        { t: 'ctx', n: 16, code: '    o.create_time,' },
+        { t: 'ctx', n: 17, code: '' },
+      ]
+    },
+    '9e14b07': {
+      label: '9e14b07 · 1 小时前',
+      old: [
+        { t: 'ctx', n: 1, code: '-- @job: dwd_order_item_da' },
+        { t: 'ctx', n: 2, code: '-- @schedule: 0 2 * * *' },
+        { t: 'sep' },
+        { t: 'ctx', n: 14, code: '    o.user_id,' },
+        { t: 'del', n: 15, code: '    o.create_time,' },
+        { t: 'emp' },
+      ],
+      new: [
+        { t: 'ctx', n: 1, code: '-- @job: dwd_order_item_da' },
+        { t: 'ctx', n: 2, code: '-- @schedule: 0 2 * * *' },
+        { t: 'sep' },
+        { t: 'ctx', n: 14, code: '    o.user_id,' },
+        { t: 'add', n: 15, code: '    o.channel_id,' },
+        { t: 'ctx', n: 16, code: '    o.create_time,' },
+      ]
+    },
+    'c2d91f3': {
+      label: 'c2d91f3 · 昨天（初始提交）',
+      old: [
+        { t: 'emp' }, { t: 'emp' }, { t: 'emp' }, { t: 'emp' },
+        { t: 'emp' }, { t: 'emp' }, { t: 'emp' }, { t: 'emp' },
+      ],
+      new: [
+        { t: 'add', n: 1,  code: '-- @job: dwd_order_item_da' },
+        { t: 'add', n: 2,  code: '-- @schedule: 0 2 * * *' },
+        { t: 'add', n: 3,  code: '-- @owner: wangliang' },
+        { t: 'add', n: 4,  code: '' },
+        { t: 'add', n: 5,  code: 'INSERT OVERWRITE TABLE dw_conan.dwd_order_item_da' },
+        { t: 'add', n: 6,  code: 'PARTITION (dt = \'${dt}\')' },
+        { t: 'add', n: 7,  code: 'SELECT' },
+        { t: 'add', n: 8,  code: '    oi.order_id,' },
+      ]
+    }
+  };
+
+  function renderSdiffPanel(lines) {
+    return lines.map(l => {
+      if (l.t === 'sep') return `<div class="sdiff-sep">@@ … @@</div>`;
+      if (l.t === 'emp') return `<div class="sdiff-line empty"><span class="sdiff-num"> </span><span class="sdiff-text"> </span></div>`;
+      const cls = l.t === 'del' ? 'del' : l.t === 'add' ? 'add' : '';
+      return `<div class="sdiff-line ${cls}"><span class="sdiff-num">${l.n}</span><span class="sdiff-text">${l.code.replace(/</g,'&lt;')}</span></div>`;
+    }).join('');
+  }
+
+  function openDiff(hash, msg) {
+    const data = DIFF_DATA[hash];
+    if (!data) return;
+    document.getElementById('diffHash').textContent = hash;
+    document.getElementById('diffMsg').textContent = msg;
+    document.getElementById('diffOldLabel').textContent = data.label;
+    document.getElementById('diffOld').innerHTML = renderSdiffPanel(data.old);
+    document.getElementById('diffNew').innerHTML = renderSdiffPanel(data.new);
+    // Show diff view, hide editor
+    document.getElementById('codeEditorWrap').style.display = 'none';
+    document.getElementById('diffView').classList.add('active');
+    // Switch to history tab if not already
+    switchTabById('history');
+  }
+
+  function closeDiff() {
+    document.getElementById('diffView').classList.remove('active');
+    document.getElementById('codeEditorWrap').style.display = '';
+  }
+
+  function switchTabById(id) {
+    const tabs = document.querySelectorAll('.panel-tab');
+    const panes = document.querySelectorAll('.tab-pane');
+    tabs.forEach(t => t.classList.remove('active'));
+    panes.forEach(p => p.classList.remove('active'));
+    const idx = ['test','parse','history'].indexOf(id);
+    if (idx >= 0) {
+      tabs[idx].classList.add('active');
+      document.getElementById('tab-' + id).classList.add('active');
+    }
+  }
+
+  // ── CRON HINT ────────────────────────────────────────────────────
+  const cronDescriptions = {
+    '0 2 * * *': '每天凌晨 2:00 执行',
+    '0 3 * * *': '每天凌晨 3:00 执行',
+    '0 0 * * *': '每天零点执行',
+    '0 */4 * * *': '每 4 小时执行一次',
+    '0 2 * * 1': '每周一凌晨 2:00 执行',
+    '0 2 1 * *': '每月 1 日凌晨 2:00 执行',
+  };
+  function updateCronHint(input) {
+    const hint = document.getElementById('cronHint');
+    const desc = cronDescriptions[input.value.trim()];
+    hint.textContent = desc || '自定义调度周期';
+    hint.style.color = desc ? 'var(--green)' : 'var(--text-muted)';
+  }
+</script>
+</body>
+</html>

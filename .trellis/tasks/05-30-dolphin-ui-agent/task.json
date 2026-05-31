@@ -1,0 +1,29 @@
+{
+  "id": "dolphin-ui-agent",
+  "name": "dolphin-ui-agent",
+  "title": "DolphinScheduler UI Agent化建设",
+  "description": "",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": ".github/actions/comment-on-issue",
+  "priority": "P2",
+  "creator": "wangliang",
+  "assignee": "wangliang",
+  "createdAt": "2026-05-30",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "dev",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "05-30-sql-first-job-editor",
+    "05-30-sql-git-version-management"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}

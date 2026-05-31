@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DolphinScheduler · UI Agent化改造 — 信息架构总览</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f17;
+    --bg2: #16162a;
+    --bg3: #1e1e35;
+    --border: rgba(99,102,241,.2);
+    --border-light: rgba(99,102,241,.1);
+    --primary-start: #6366f1;
+    --primary-end: #8b5cf6;
+    --text: #e2e2f0;
+    --text-dim: #9090b8;
+    --text-muted: #5a5a80;
+    --green: #22c55e;
+    --new: #f59e0b;
+    --enhance: #38bdf8;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── Gradient utilities ── */
+  .grad { background: linear-gradient(135deg, var(--primary-start), var(--primary-end)); }
+  .grad-text {
+    background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ═══════════════════════════════════════════
+     HEADER
+  ═══════════════════════════════════════════ */
+  header {
+    background: linear-gradient(180deg, #0f0f1f 0%, var(--bg) 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 48px 24px 40px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(99,102,241,.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .header-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(99,102,241,.12);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 12px;
+    color: var(--primary-start);
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  h1 {
+    font-size: clamp(24px, 4vw, 40px);
+    font-weight: 700;
+    letter-spacing: -.02em;
+    margin-bottom: 12px;
+  }
+
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 15px;
+    margin-bottom: 40px;
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .subtitle span { display: flex; align-items: center; gap: 6px; }
+
+  /* Stats row */
+  .stats-row {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 32px;
+    text-align: center;
+    min-width: 140px;
+    position: relative;
+    overflow: hidden;
+    transition: transform .2s, border-color .2s;
+  }
+  .stat-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary-start), var(--primary-end));
+  }
+  .stat-card:hover { transform: translateY(-3px); border-color: rgba(99,102,241,.5); }
+  .stat-num {
+    font-size: 36px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 6px;
+    background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .stat-label {
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  /* ═══════════════════════════════════════════
+     MAIN LAYOUT
+  ═══════════════════════════════════════════ */
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  .section-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title::before {
+    content: "";
+    width: 4px;
+    height: 20px;
+    background: linear-gradient(180deg, var(--primary-start), var(--primary-end));
+    border-radius: 2px;
+    display: inline-block;
+  }
+
+  /* ═══════════════════════════════════════════
+     NAV COMPARISON
+  ═══════════════════════════════════════════ */
+  .nav-comparison {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 24px;
+    align-items: center;
+    margin-bottom: 56px;
+  }
+  @media(max-width:768px) {
+    .nav-comparison { grid-template-columns: 1fr; }
+    .arrow-col { transform: rotate(90deg); }
+  }
+
+  .nav-panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .nav-panel-header {
+    padding: 14px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .nav-panel-header.old { color: var(--text-muted); background: var(--bg3); }
+  .nav-panel-header.new {
+    background: linear-gradient(135deg, rgba(99,102,241,.18), rgba(139,92,246,.12));
+    color: var(--primary-start);
+  }
+
+  .nav-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 11px 20px;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 14px;
+    transition: background .15s;
+  }
+  .nav-item:last-child { border-bottom: none; }
+  .nav-panel.old .nav-item { color: var(--text-dim); }
+  .nav-panel.old .nav-item:hover { background: rgba(255,255,255,.03); }
+  .nav-panel.new .nav-item { color: var(--text); }
+  .nav-panel.new .nav-item:hover { background: rgba(99,102,241,.07); }
+  .nav-item.highlight {
+    background: linear-gradient(90deg, rgba(99,102,241,.15), rgba(139,92,246,.08));
+    color: #a5b4fc;
+    font-weight: 600;
+  }
+
+  .badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    padding: 2px 7px;
+    border-radius: 10px;
+    text-transform: uppercase;
+  }
+  .badge-new { background: rgba(245,158,11,.15); color: var(--new); border: 1px solid rgba(245,158,11,.3); }
+  .badge-count { background: rgba(99,102,241,.15); color: var(--primary-start); border: 1px solid var(--border); font-size: 11px; padding: 1px 7px; }
+
+  .arrow-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-dim);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .arrow-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-start), var(--primary-end));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(99,102,241,.4);
+  }
+
+  /* ═══════════════════════════════════════════
+     MODULE CARDS (ACCORDION)
+  ═══════════════════════════════════════════ */
+  .modules-grid {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 56px;
+  }
+
+  .module-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color .2s;
+  }
+  .module-card:hover { border-color: rgba(99,102,241,.4); }
+  .module-card.open { border-color: rgba(99,102,241,.5); }
+  .module-card.special { border-color: rgba(99,102,241,.4); }
+  .module-card.special .module-header { background: linear-gradient(135deg, rgba(99,102,241,.2), rgba(139,92,246,.12)); }
+
+  .module-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    cursor: pointer;
+    user-select: none;
+    transition: background .15s;
+  }
+  .module-header:hover { background: rgba(99,102,241,.06); }
+
+  .module-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+    background: rgba(99,102,241,.12);
+  }
+  .module-icon.special { background: linear-gradient(135deg, var(--primary-start), var(--primary-end)); }
+
+  .module-meta { flex: 1; }
+  .module-name { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .module-desc { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+  .module-toggle {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(99,102,241,.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    font-size: 16px;
+    transition: transform .3s, background .2s;
+    flex-shrink: 0;
+  }
+  .module-card.open .module-toggle { transform: rotate(180deg); background: rgba(99,102,241,.2); }
+
+  .module-body {
+    display: none;
+    padding: 0 20px 20px;
+    border-top: 1px solid var(--border-light);
+    animation: slideDown .25s ease;
+  }
+  .module-card.open .module-body { display: block; }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .feature-group { margin-top: 16px; }
+  .feature-group-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .feature-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 6px;
+  }
+  .feature-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    background: rgba(255,255,255,.03);
+    border: 1px solid transparent;
+    transition: background .15s, border-color .15s;
+  }
+  .feature-item:hover { background: rgba(99,102,241,.08); border-color: var(--border-light); }
+  .status-icon { font-size: 14px; flex-shrink: 0; }
+
+  /* status legend */
+  .legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 12px 0 0;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+
+  /* ═══════════════════════════════════════════
+     SQL STUDIO FLOW
+  ═══════════════════════════════════════════ */
+  .flow-section {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    margin-bottom: 56px;
+  }
+
+  .flow-steps {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .flow-step {
+    flex-shrink: 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: default;
+  }
+
+  .flow-box {
+    border-radius: 10px;
+    padding: 14px 18px;
+    min-width: 112px;
+    text-align: center;
+    border: 1.5px solid var(--border);
+    background: var(--bg3);
+    transition: transform .2s, box-shadow .2s;
+    position: relative;
+  }
+  .flow-box:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(99,102,241,.25); }
+
+  .flow-box.accent {
+    background: linear-gradient(135deg, rgba(99,102,241,.25), rgba(139,92,246,.18));
+    border-color: rgba(99,102,241,.6);
+  }
+  .flow-box.accent2 {
+    background: linear-gradient(135deg, rgba(139,92,246,.2), rgba(99,102,241,.12));
+    border-color: rgba(139,92,246,.5);
+  }
+
+  .flow-box-icon { font-size: 24px; margin-bottom: 6px; }
+  .flow-box-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; }
+  .flow-box-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  /* tooltip */
+  .flow-step .tooltip {
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%) scale(.9);
+    background: #1a1a30;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s, transform .2s;
+    z-index: 10;
+    box-shadow: 0 8px 24px rgba(0,0,0,.5);
+  }
+  .flow-step .tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%; left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: var(--border);
+  }
+  .flow-step:hover .tooltip { opacity: 1; transform: translateX(-50%) scale(1); }
+
+  .flow-arrow {
+    flex-shrink: 0;
+    color: var(--text-muted);
+    font-size: 20px;
+    padding: 0 4px;
+    margin-top: -16px; /* align with box center approx */
+  }
+
+  /* ═══════════════════════════════════════════
+     FIELD COVERAGE TABLE
+  ═══════════════════════════════════════════ */
+  .coverage-section {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .coverage-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+    padding: 24px;
+  }
+  .field-chip {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: border-color .2s, background .2s;
+  }
+  .field-chip:hover {
+    border-color: rgba(99,102,241,.5);
+    background: rgba(99,102,241,.07);
+  }
+  .field-chip-name { font-weight: 600; color: var(--text); }
+  .field-chip-sub { font-size: 11px; color: var(--text-muted); }
+  .field-chip-check { font-size: 12px; color: var(--green); margin-top: 2px; }
+
+  /* ═══════════════════════════════════════════
+     FOOTER
+  ═══════════════════════════════════════════ */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 24px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  footer a { color: var(--primary-start); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  /* ═══════════════════════════════════════════
+     SCROLL BAR
+  ═══════════════════════════════════════════ */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════ HEADER ═══════ -->
+<header>
+  <div class="header-eyebrow">
+    <span>🐬</span> Apache DolphinScheduler · UI 升级规划
+  </div>
+  <h1>
+    <span class="grad-text">DolphinScheduler</span>
+    <span style="color:var(--text-dim);font-weight:400"> · </span>
+    UI Agent化改造
+  </h1>
+  <div class="subtitle">
+    <span>✅ 原有功能 100% 保留</span>
+    <span>🆕 SQL Studio 并行新增</span>
+    <span>🤖 Agent 辅助可选</span>
+  </div>
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-num" data-target="7">0</div>
+      <div class="stat-label">大模块</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" data-target="32">0</div>
+      <div class="stat-label">功能页面</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" data-target="0">0</div>
+      <div class="stat-label">破坏性变更</div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════ MAIN ═══════ -->
+<main>
+
+  <!-- ── Navigation Comparison ── -->
+  <div class="section-title">导航架构对比</div>
+
+  <div class="nav-comparison">
+
+    <!-- OLD NAV -->
+    <div class="nav-panel old">
+      <div class="nav-panel-header old">📦 现有导航（v3.x）</div>
+      <div class="nav-item">🏠 首页 <span class="badge badge-count">2 板块</span></div>
+      <div class="nav-item">📂 项目管理 <span class="badge badge-count">4 板块</span></div>
+      <div class="nav-item">💾 资源中心 <span class="badge badge-count">2 板块</span></div>
+      <div class="nav-item">🔌 数据源中心 <span class="badge badge-count">1 板块</span></div>
+      <div class="nav-item">📊 监控中心 <span class="badge badge-count">4 板块</span></div>
+      <div class="nav-item">🔐 安全中心 <span class="badge badge-count">10 板块</span></div>
+    </div>
+
+    <!-- ARROW -->
+    <div class="arrow-col">
+      <div class="arrow-icon">→</div>
+      <span>升级为</span>
+    </div>
+
+    <!-- NEW NAV -->
+    <div class="nav-panel new">
+      <div class="nav-panel-header new">✨ 新导航（改造后）</div>
+      <div class="nav-item">🏠 首页 <span class="badge badge-count">3 板块</span></div>
+      <div class="nav-item highlight">💻 SQL Studio <span class="badge badge-new">NEW</span></div>
+      <div class="nav-item">📂 项目管理 <span class="badge badge-count">4 板块</span></div>
+      <div class="nav-item">💾 资源中心 <span class="badge badge-count">2 板块</span></div>
+      <div class="nav-item">🔌 数据源 <span class="badge badge-count">1 板块</span></div>
+      <div class="nav-item">📊 监控中心 <span class="badge badge-count">4 板块</span></div>
+      <div class="nav-item">🔐 安全中心 <span class="badge badge-count">10 板块</span></div>
+    </div>
+
+  </div>
+
+  <!-- ── Module Cards ── -->
+  <div class="section-title">各模块功能明细</div>
+
+  <!-- Legend -->
+  <div class="legend" style="margin-bottom:20px">
+    <span>✅ 保留原有功能</span>
+    <span>🆕 新增功能</span>
+    <span>🔄 增强/改名</span>
+  </div>
+
+  <div class="modules-grid">
+
+    <!-- 1. Home -->
+    <div class="module-card" id="card-home">
+      <div class="module-header" onclick="toggle('card-home')">
+        <div class="module-icon">🏠</div>
+        <div class="module-meta">
+          <div class="module-name">首页</div>
+          <div class="module-desc">任务统计、工作流统计 + SQL作业快速入口</div>
+        </div>
+        <div class="module-toggle">⌃</div>
+      </div>
+      <div class="module-body">
+        <div class="feature-group">
+          <div class="feature-group-title">概览板块</div>
+          <div class="feature-list">
+            <div class="feature-item"><span class="status-icon">✅</span> 任务执行统计</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 工作流状态汇总</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 工作流定义数量</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 命令队列排队数</div>
+            <div class="feature-item"><span class="status-icon">🆕</span> SQL作业快速入口</div>
+            <div class="feature-item"><span class="status-icon">🆕</span> 最近执行记录</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. SQL Studio (special, open by default) -->
+    <div class="module-card special open" id="card-sql">
+      <div class="module-header" onclick="toggle('card-sql')">
+        <div class="module-icon special">💻</div>
+        <div class="module-meta">
+          <div class="module-name">SQL Studio <span class="badge badge-new">NEW</span></div>
+          <div class="module-desc">SQL-first 作业开发工作台，Git 版本管理 + Agent 辅助</div>
+        </div>
+        <div class="module-toggle">⌃</div>
+      </div>
+      <div class="module-body">
+        <div class="feature-group">
+          <div class="feature-group-title">SQL 作业工作台</div>
+          <div class="feature-list">
+            <div class="feature-item"><span class="status-icon">🆕</span> SQL 编辑器（Monaco）</div>
+            <div class="feature-item"><span class="status-icon">🆕</span> 语法高亮 & 自动补全</div>
+            <div class="feature-item"><span class="status-icon">🆕</span> 多标签文件管理</div>
+            <div class="feature-item"><span class="status-icon">🆕</span> 数据源选择器</div>
+            <div class="feature-item"><span class="status-icon">🆕</span> 执行结果预览</div>
+            <div class="feature-item"><span class="status-icon">🆕</span> AI 辅助写 SQL</div>
+          </div>
+        </div>
+        <div class="feature-group">
+          <div class="feature-group-title">Git 版本管理</div>
+          <div class="feature-list">
+            <div class="feature-item"><span class="status-icon">🆕</span> 分支切换（master/个人）</div>
+            <div class="feature-item"><span class="status-icon">🆕</span> 提交历史 & Diff 查看</div>
+            <div class="feature-item"><span class="status-icon">🆕</span> Pull Request 发起</div>
+            <div class="feature-item"><span class="status-icon">🆕</span> AI 生成 Commit 消息</div>
+          </div>
+        </div>
+        <div class="feature-group">
+          <div class="feature-group-title">发布 & 上线</div>
+          <div class="feature-list">
+            <div class="feature-item"><span class="status-icon">🆕</span> 发布抽屉（一键配置）</div>
+            <div class="feature-item"><span class="status-icon">🆕</span> 依赖自动解析</div>
+            <div class="feature-item"><span class="status-icon">🆕</span> 上下游字段血缘</div>
+            <div class="feature-item"><span class="status-icon">🆕</span> 自动生成 DS Workflow</div>
+          </div>
+        </div>
+        <div class="feature-group">
+          <div class="feature-group-title">运维 & 监控</div>
+          <div class="feature-list">
+            <div class="feature-item"><span class="status-icon">🆕</span> SQL 作业实例列表</div>
+            <div class="feature-item"><span class="status-icon">🆕</span> 日志实时查看</div>
+            <div class="feature-item"><span class="status-icon">🆕</span> 定时管理（Cron）</div>
+            <div class="feature-item"><span class="status-icon">🆕</span> 手动重跑 / 补数</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Project Management -->
+    <div class="module-card" id="card-project">
+      <div class="module-header" onclick="toggle('card-project')">
+        <div class="module-icon">📂</div>
+        <div class="module-meta">
+          <div class="module-name">项目管理</div>
+          <div class="module-desc">工作流定义 · 实例监控 · 任务实例 · 定时管理</div>
+        </div>
+        <div class="module-toggle">⌃</div>
+      </div>
+      <div class="module-body">
+        <div class="feature-group">
+          <div class="feature-group-title">工作流定义（9个操作）</div>
+          <div class="feature-list">
+            <div class="feature-item"><span class="status-icon">✅</span> 创建工作流</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 编辑 DAG</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 上线 / 下线</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 手动运行</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 定时设置</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 导出 JSON</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 版本信息</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 复制工作流</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 删除</div>
+            <div class="feature-item"><span class="status-icon">🔄</span> 转为 SQL 作业</div>
+          </div>
+        </div>
+        <div class="feature-group">
+          <div class="feature-group-title">工作流实例（7个操作）</div>
+          <div class="feature-list">
+            <div class="feature-item"><span class="status-icon">✅</span> 实例列表 & 筛选</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 查看 DAG 执行图</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 重新执行</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 恢复暂停</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 停止 / 暂停</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 删除</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 甘特图</div>
+          </div>
+        </div>
+        <div class="feature-group">
+          <div class="feature-group-title">任务实例（3个操作）</div>
+          <div class="feature-list">
+            <div class="feature-item"><span class="status-icon">✅</span> 任务实例列表</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 查看日志</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 强制成功</div>
+          </div>
+        </div>
+        <div class="feature-group">
+          <div class="feature-group-title">定时管理</div>
+          <div class="feature-list">
+            <div class="feature-item"><span class="status-icon">✅</span> Cron 表达式配置</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 定时上线 / 下线</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Resource Center -->
+    <div class="module-card" id="card-resource">
+      <div class="module-header" onclick="toggle('card-resource')">
+        <div class="module-icon">💾</div>
+        <div class="module-meta">
+          <div class="module-name">资源中心</div>
+          <div class="module-desc">文件管理 · 任务组管理</div>
+        </div>
+        <div class="module-toggle">⌃</div>
+      </div>
+      <div class="module-body">
+        <div class="feature-group">
+          <div class="feature-group-title">文件管理</div>
+          <div class="feature-list">
+            <div class="feature-item"><span class="status-icon">✅</span> 创建文件</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 上传文件</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 重命名</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 下载</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 删除</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 查看内容</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 目录管理</div>
+          </div>
+        </div>
+        <div class="feature-group">
+          <div class="feature-group-title">任务组</div>
+          <div class="feature-list">
+            <div class="feature-item"><span class="status-icon">✅</span> 任务组列表</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 任务组队列</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Datasource -->
+    <div class="module-card" id="card-ds">
+      <div class="module-header" onclick="toggle('card-ds')">
+        <div class="module-icon">🔌</div>
+        <div class="module-meta">
+          <div class="module-name">数据源</div>
+          <div class="module-desc">12种数据源类型，CRUD + 连接测试</div>
+        </div>
+        <div class="module-toggle">⌃</div>
+      </div>
+      <div class="module-body">
+        <div class="feature-group">
+          <div class="feature-group-title">支持数据源类型（12种）</div>
+          <div class="feature-list">
+            <div class="feature-item"><span class="status-icon">✅</span> MySQL</div>
+            <div class="feature-item"><span class="status-icon">✅</span> PostgreSQL</div>
+            <div class="feature-item"><span class="status-icon">✅</span> Hive / Impala</div>
+            <div class="feature-item"><span class="status-icon">✅</span> ClickHouse</div>
+            <div class="feature-item"><span class="status-icon">✅</span> Spark SQL</div>
+            <div class="feature-item"><span class="status-icon">✅</span> Presto / Trino</div>
+            <div class="feature-item"><span class="status-icon">✅</span> Oracle</div>
+            <div class="feature-item"><span class="status-icon">✅</span> SQL Server</div>
+            <div class="feature-item"><span class="status-icon">✅</span> DB2</div>
+            <div class="feature-item"><span class="status-icon">✅</span> Redshift</div>
+            <div class="feature-item"><span class="status-icon">✅</span> Doris</div>
+            <div class="feature-item"><span class="status-icon">✅</span> Databend</div>
+          </div>
+        </div>
+        <div class="feature-group">
+          <div class="feature-group-title">管理操作</div>
+          <div class="feature-list">
+            <div class="feature-item"><span class="status-icon">✅</span> 新增数据源</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 编辑连接配置</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 连接测试</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 删除</div>
+            <div class="feature-item"><span class="status-icon">🔄</span> SQL Studio 快速绑定</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Monitor -->
+    <div class="module-card" id="card-monitor">
+      <div class="module-header" onclick="toggle('card-monitor')">
+        <div class="module-icon">📊</div>
+        <div class="module-meta">
+          <div class="module-name">监控中心</div>
+          <div class="module-desc">Master/Worker 监控 · 审计日志 · 统计信息</div>
+        </div>
+        <div class="module-toggle">⌃</div>
+      </div>
+      <div class="module-body">
+        <div class="feature-group">
+          <div class="feature-group-title">服务监控</div>
+          <div class="feature-list">
+            <div class="feature-item"><span class="status-icon">✅</span> Master 节点列表</div>
+            <div class="feature-item"><span class="status-icon">✅</span> Worker 节点列表</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 节点 JVM 详情</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 节点心跳状态</div>
+          </div>
+        </div>
+        <div class="feature-group">
+          <div class="feature-group-title">日志 & 统计</div>
+          <div class="feature-list">
+            <div class="feature-item"><span class="status-icon">✅</span> 审计日志查询</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 任务执行统计</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 工作流统计</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 队列状态</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. Security -->
+    <div class="module-card" id="card-security">
+      <div class="module-header" onclick="toggle('card-security')">
+        <div class="module-icon">🔐</div>
+        <div class="module-meta">
+          <div class="module-name">安全中心</div>
+          <div class="module-desc">10个子模块：租户、用户、告警、Worker组、环境、集群等</div>
+        </div>
+        <div class="module-toggle">⌃</div>
+      </div>
+      <div class="module-body">
+        <div class="feature-group">
+          <div class="feature-group-title">用户 & 权限</div>
+          <div class="feature-list">
+            <div class="feature-item"><span class="status-icon">✅</span> 租户管理</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 用户管理</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 访问令牌</div>
+          </div>
+        </div>
+        <div class="feature-group">
+          <div class="feature-group-title">告警配置</div>
+          <div class="feature-list">
+            <div class="feature-item"><span class="status-icon">✅</span> 告警组管理</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 告警实例管理</div>
+          </div>
+        </div>
+        <div class="feature-group">
+          <div class="feature-group-title">执行环境</div>
+          <div class="feature-list">
+            <div class="feature-item"><span class="status-icon">✅</span> Worker 组管理</div>
+            <div class="feature-item"><span class="status-icon">✅</span> Yarn 队列管理</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 环境管理</div>
+            <div class="feature-item"><span class="status-icon">✅</span> 集群管理</div>
+            <div class="feature-item"><span class="status-icon">✅</span> K8s Namespace</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /modules-grid -->
+
+  <!-- ── SQL Studio Flow ── -->
+  <div class="section-title">SQL Studio 发布流程</div>
+
+  <div class="flow-section">
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:24px">
+      从写 SQL 到工作流上线 — 全链路零配置，底层复用 DS 调度内核
+    </p>
+    <div class="flow-steps">
+
+      <div class="flow-step">
+        <div class="flow-box accent">
+          <div class="flow-box-icon">✍️</div>
+          <div class="flow-box-name">写 SQL</div>
+          <div class="flow-box-sub">Monaco Editor</div>
+        </div>
+        <div class="tooltip">在 SQL Studio 中编写 HQL/SQL<br>支持 AI 辅助生成和补全</div>
+      </div>
+
+      <div class="flow-arrow">→</div>
+
+      <div class="flow-step">
+        <div class="flow-box">
+          <div class="flow-box-icon">💾</div>
+          <div class="flow-box-name">保存</div>
+          <div class="flow-box-sub">Git 个人分支</div>
+        </div>
+        <div class="tooltip">自动提交到个人开发分支<br>AI 生成 Commit 消息</div>
+      </div>
+
+      <div class="flow-arrow">→</div>
+
+      <div class="flow-step">
+        <div class="flow-box">
+          <div class="flow-box-icon">▶️</div>
+          <div class="flow-box-name">测试运行</div>
+          <div class="flow-box-sub">即时执行</div>
+        </div>
+        <div class="tooltip">在开发环境一键执行<br>查看结果集 & 错误信息</div>
+      </div>
+
+      <div class="flow-arrow">→</div>
+
+      <div class="flow-step">
+        <div class="flow-box accent">
+          <div class="flow-box-icon">📋</div>
+          <div class="flow-box-name">发布确认</div>
+          <div class="flow-box-sub">依赖解析 & 配置</div>
+        </div>
+        <div class="tooltip">填写发布抽屉：Worker组、租户、<br>告警组、Cron、数据源等配置</div>
+      </div>
+
+      <div class="flow-arrow">→</div>
+
+      <div class="flow-step">
+        <div class="flow-box">
+          <div class="flow-box-icon">🔀</div>
+          <div class="flow-box-name">合并 master</div>
+          <div class="flow-box-sub">PR & Review</div>
+        </div>
+        <div class="tooltip">创建 PR → Code Review<br>合并到 master 分支</div>
+      </div>
+
+      <div class="flow-arrow">→</div>
+
+      <div class="flow-step">
+        <div class="flow-box accent2">
+          <div class="flow-box-icon">🐬</div>
+          <div class="flow-box-name">DS Workflow</div>
+          <div class="flow-box-sub">自动生成 & 上线</div>
+        </div>
+        <div class="tooltip">自动生成 DolphinScheduler<br>WorkflowDefinition 并 ONLINE</div>
+      </div>
+
+      <div class="flow-arrow">→</div>
+
+      <div class="flow-step">
+        <div class="flow-box">
+          <div class="flow-box-icon">📈</div>
+          <div class="flow-box-name">实例监控</div>
+          <div class="flow-box-sub">SQL Studio</div>
+        </div>
+        <div class="tooltip">在 SQL Studio 实例视图中<br>查看运行状态和日志</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Field Coverage ── -->
+  <div class="section-title">发布抽屉字段覆盖度</div>
+
+  <div class="coverage-section">
+    <div class="coverage-header">
+      🗂️ 发布抽屉覆盖的 DS 原生调度字段
+      <span style="margin-left:auto;font-size:13px;font-weight:400;color:var(--text-muted)">
+        SQL Studio 发布抽屉 → DS WorkflowDefinition
+      </span>
+    </div>
+    <div class="field-grid">
+
+      <div class="field-chip">
+        <div class="field-chip-name">Worker 组</div>
+        <div class="field-chip-sub">workerGroup</div>
+        <div class="field-chip-check">✅ 已覆盖</div>
+      </div>
+
+      <div class="field-chip">
+        <div class="field-chip-name">租户</div>
+        <div class="field-chip-sub">tenantCode</div>
+        <div class="field-chip-check">✅ 已覆盖</div>
+      </div>
+
+      <div class="field-chip">
+        <div class="field-chip-name">环境</div>
+        <div class="field-chip-sub">environmentCode</div>
+        <div class="field-chip-check">✅ 已覆盖</div>
+      </div>
+
+      <div class="field-chip">
+        <div class="field-chip-name">优先级</div>
+        <div class="field-chip-sub">processInstancePriority</div>
+        <div class="field-chip-check">✅ 已覆盖</div>
+      </div>
+
+      <div class="field-chip">
+        <div class="field-chip-name">执行策略</div>
+        <div class="field-chip-sub">executionType</div>
+        <div class="field-chip-check">✅ 已覆盖</div>
+      </div>
+
+      <div class="field-chip">
+        <div class="field-chip-name">失败策略</div>
+        <div class="field-chip-sub">failureStrategy</div>
+        <div class="field-chip-check">✅ 已覆盖</div>
+      </div>
+
+      <div class="field-chip">
+        <div class="field-chip-name">告警组</div>
+        <div class="field-chip-sub">warningGroupId</div>
+        <div class="field-chip-check">✅ 已覆盖</div>
+      </div>
+
+      <div class="field-chip">
+        <div class="field-chip-name">通知策略</div>
+        <div class="field-chip-sub">warningType</div>
+        <div class="field-chip-check">✅ 已覆盖</div>
+      </div>
+
+      <div class="field-chip">
+        <div class="field-chip-name">超时</div>
+        <div class="field-chip-sub">timeout (seconds)</div>
+        <div class="field-chip-check">✅ 已覆盖</div>
+      </div>
+
+      <div class="field-chip">
+        <div class="field-chip-name">Cron 调度</div>
+        <div class="field-chip-sub">schedule.crontab</div>
+        <div class="field-chip-check">✅ 已覆盖</div>
+      </div>
+
+      <div class="field-chip">
+        <div class="field-chip-name">数据源</div>
+        <div class="field-chip-sub">datasourceId (task)</div>
+        <div class="field-chip-check">✅ 已覆盖</div>
+      </div>
+
+      <div class="field-chip">
+        <div class="field-chip-name">全局变量</div>
+        <div class="field-chip-sub">globalParams [ ]</div>
+        <div class="field-chip-check">✅ 已覆盖</div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<!-- ═══════ FOOTER ═══════ -->
+<footer>
+  DolphinScheduler UI Agent化改造 · 信息架构总览 · 2025 &nbsp;|&nbsp;
+  <a href="sql-studio-demo.html">SQL Studio Demo →</a>
+</footer>
+
+<script>
+  /* ── Accordion toggle ── */
+  function toggle(id) {
+    const card = document.getElementById(id);
+    card.classList.toggle('open');
+  }
+
+  /* ── Counter animation ── */
+  function animateCounter(el, target, duration) {
+    const start = performance.now();
+    function step(now) {
+      const elapsed = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - elapsed, 3); // ease-out cubic
+      el.textContent = Math.round(eased * target);
+      if (elapsed < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  /* Trigger counters when header is visible (immediate on load) */
+  window.addEventListener('DOMContentLoaded', () => {
+    const nums = document.querySelectorAll('.stat-num[data-target]');
+    nums.forEach(el => {
+      const target = parseInt(el.dataset.target, 10);
+      // slight stagger
+      const delay = Array.from(nums).indexOf(el) * 200;
+      setTimeout(() => animateCounter(el, target, 900), delay + 300);
+    });
+  });
+</script>
+
+</body>
+</html>

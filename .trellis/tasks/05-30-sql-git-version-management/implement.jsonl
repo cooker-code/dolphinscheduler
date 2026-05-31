@@ -1,0 +1,8 @@
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "本任务跨 dao/service/api/common 多模块，需保持跨层一致性"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "需评估与 t_ds_resources / t_ds_workflow_definition 的复用边界，避免重复造版本机制"}
+{"file": "dolphinscheduler-dao/src/main/resources/sql/dolphinscheduler_mysql.sql", "reason": "新增 t_ds_sql_job 表需与现有 schema 风格一致；t_ds_resources / t_ds_workflow_definition 是参照对象"}
+{"file": "dolphinscheduler-api/src/main/java/org/apache/dolphinscheduler/api/audit/OperatorLog.java", "reason": "deploy/save/revert/ai-draft 都需要 @OperatorLog 标注，需在 AuditType 中新增枚举值"}
+{"file": "dolphinscheduler-api/src/main/java/org/apache/dolphinscheduler/api/audit/enums/AuditType.java", "reason": "新增 SQL_JOB_SAVE / SQL_JOB_DEPLOY / SQL_JOB_REVERT / SQL_JOB_AI_DRAFT 等枚举"}
+{"file": "dolphinscheduler-api/src/main/java/org/apache/dolphinscheduler/api/controller/ResourcesController.java", "reason": "新建 SqlJobController 时参考资源中心控制器的鉴权和异常处理风格"}
+{"file": "dolphinscheduler-service/src/main/java/org/apache/dolphinscheduler/service/process/ProcessService.java", "reason": "deploy 后联动更新 task definition，需了解 ProcessService 的 update 入口"}
+{"file": "dolphinscheduler-bom/pom.xml", "reason": "JGit 依赖统一在此声明版本"}
