@@ -1,0 +1,118 @@
+# DolphinScheduler 本地开发环境 Docker Compose (MySQL版)
+# 用途：仅启动依赖服务（MySQL、ZooKeeper），项目代码在本地IDEA中启动
+
+version: '3.8'
+
+services:
+  # MySQL 数据库
+  dolphinscheduler-mysql:
+    image: mysql:8.0
+    container_name: dolphinscheduler-mysql
+    hostname: dolphinscheduler-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: dolphinscheduler
+      MYSQL_USER: ds_user
+      MYSQL_PASSWORD: ds_password
+    volumes:
+      # 挂载初始化SQL脚本（首次启动自动执行）
+      - ./dolphinscheduler-dao/src/main/resources/sql/dolphinscheduler_mysql.sql:/docker-entrypoint-initdb.d/dolphinscheduler_mysql.sql
+      # 数据持久化
+      - dolphinscheduler-mysql-data:/var/lib/mysql
+    command: 
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max_connections=500
+      - --sql_mode=STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION
+    networks:
+      - dolphinscheduler-dev
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # ZooKeeper 注册中心
+  dolphinscheduler-zookeeper:
+    image: zookeeper:3.8
+    container_name: dolphinscheduler-zookeeper
+    hostname: dolphinscheduler-zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      TZ: Asia/Shanghai
+      ZOO_4LW_COMMANDS_WHITELIST: srvr,ruok,wchs,cons
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=dolphinscheduler-zookeeper:2888:3888;2181
+    volumes:
+      - dolphinscheduler-zookeeper-data:/data
+      - dolphinscheduler-zookeeper-datalog:/datalog
+      - dolphinscheduler-zookeeper-logs:/logs
+    networks:
+      - dolphinscheduler-dev
+    healthcheck:
+      test: ["CMD", "zkServer.sh", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # 可选：Etcd（如果您想用Etcd代替ZooKeeper作为注册中心）
+  # 使用时需要注释掉上面的 dolphinscheduler-zookeeper 服务
+  # dolphinscheduler-etcd:
+  #   image: quay.io/coreos/etcd:v3.5.9
+  #   container_name: dolphinscheduler-etcd
+  #   hostname: dolphinscheduler-etcd
+  #   ports:
+  #     - "2379:2379"
+  #     - "2380:2380"
+  #   environment:
+  #     TZ: Asia/Shanghai
+  #     ETCD_NAME: etcd0
+  #     ETCD_DATA_DIR: /etcd-data
+  #     ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+  #     ETCD_ADVERTISE_CLIENT_URLS: http://localhost:2379
+  #     ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+  #     ETCD_INITIAL_ADVERTISE_PEER_URLS: http://localhost:2380
+  #     ETCD_INITIAL_CLUSTER: etcd0=http://localhost:2380
+  #     ETCD_INITIAL_CLUSTER_STATE: new
+  #     ETCD_INITIAL_CLUSTER_TOKEN: etcd-cluster
+  #   volumes:
+  #     - dolphinscheduler-etcd-data:/etcd-data
+  #   networks:
+  #     - dolphinscheduler-dev
+  #   healthcheck:
+  #     test: ["CMD", "etcdctl", "endpoint", "health"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   restart: unless-stopped
+
+networks:
+  dolphinscheduler-dev:
+    driver: bridge
+    name: dolphinscheduler-dev
+
+volumes:
+  dolphinscheduler-mysql-data:
+    driver: local
+    name: dolphinscheduler-mysql-data
+  dolphinscheduler-zookeeper-data:
+    driver: local
+    name: dolphinscheduler-zookeeper-data
+  dolphinscheduler-zookeeper-datalog:
+    driver: local
+    name: dolphinscheduler-zookeeper-datalog
+  dolphinscheduler-zookeeper-logs:
+    driver: local
+    name: dolphinscheduler-zookeeper-logs
+  # dolphinscheduler-etcd-data:
+  #   driver: local
+  #   name: dolphinscheduler-etcd-data
