@@ -339,12 +339,12 @@ Managed by Trellis. Edits outside this block are preserved; edits inside may be 
 
 # Agent 协作快速指南
 
-> 详细版见仓库根 `DEV_SETUP.md`。本节仅作为 agent 进项目的入口提示。
+> 详细版见 `local-env/DEV_SETUP.md`。本节仅作为 agent 进项目的入口提示。
 
 ## 进项目必读顺序
 
 1. **本文件**（AGENTS.md）—— GitNexus + Trellis 全局规则
-2. **`DEV_SETUP.md`** —— 端口、启动、Swagger、agent 协作硬规则
+2. **`local-env/DEV_SETUP.md`** —— 端口、启动、日志监控、Swagger、agent 协作硬规则
 3. **当前模块 `CLAUDE.md`**（如 `dolphinscheduler-api/CLAUDE.md`）—— 模块 gotchas
 4. **`.trellis/tasks/<current>/prd.md` + `design.md` + `implement.md`** —— 当前任务上下文
 
@@ -370,4 +370,4 @@ Managed by Trellis. Edits outside this block are preserved; edits inside may be 
 
 `prd → design → implement → task.py start → trellis-implement → trellis-check → commit → PR`
 
-完整说明见 `DEV_SETUP.md` §8。
+完整说明见 `local-env/DEV_SETUP.md` §8。
