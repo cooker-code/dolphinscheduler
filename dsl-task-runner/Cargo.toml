@@ -1,0 +1,30 @@
+[package]
+name = "dsl-task-runner"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "dsl-task-runner"
+path = "src/main.rs"
+
+[lib]
+name = "dsl_task_runner"
+path = "src/lib.rs"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+tonic = { version = "0.12", features = ["transport"] }
+prost = "0.13"
+tokio-stream = "0.1"
+tokio-util = { version = "0.7", features = ["net"] }
+dashmap = "5"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[build-dependencies]
+tonic-build = "0.12"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full", "test-util"] }
+tower = "0.4"
+hyper-util = { version = "0.1", features = ["tokio"] }

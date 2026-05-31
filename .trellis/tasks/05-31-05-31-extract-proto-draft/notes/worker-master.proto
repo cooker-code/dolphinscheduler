@@ -1,0 +1,321 @@
+syntax = "proto3";
+
+package ds.extract.v1;
+
+option java_package = "org.apache.dolphinscheduler.extract.proto";
+option java_outer_classname = "WorkerMasterProto";
+option java_multiple_files = true;
+
+// ============================================================
+// Enums
+// ============================================================
+
+// Mirrors TaskExecutorLifecycleEventType in task-executor module.
+enum TaskLifecycleEventType {
+  TASK_LIFECYCLE_EVENT_TYPE_UNSPECIFIED = 0;
+  DISPATCHED = 1;
+  RUNNING = 2;
+  RUNTIME_CONTEXT_CHANGE = 3;
+  PAUSED = 4;
+  KILLED = 5;
+  SUCCESS = 6;
+  FAILED = 7;
+}
+
+// ============================================================
+// Shared value types
+// ============================================================
+
+// Mirrors org.apache.dolphinscheduler.plugin.task.api.model.Property.
+// Used for global/local params and varPool hand-off between tasks.
+message Property {
+  string prop = 1;   // required by rust-runner — param key
+  string value = 2;  // required by rust-runner — param value
+  string type = 3;   // java-only — DataType enum name (VARCHAR / INTEGER / …)
+  string direct = 4; // java-only — IN / OUT
+}
+
+// ============================================================
+// TaskExecutionContext
+// Serialised as part of DispatchTaskRequest. Carries everything
+// the worker (or rust-runner) needs to start and track the task.
+// ============================================================
+message TaskExecutionContext {
+  // --- identity ---
+  int32  task_instance_id      = 1;  // required by rust-runner
+  int32  workflow_instance_id  = 2;  // required by rust-runner
+  string task_name             = 3;  // optional
+  string task_type             = 4;  // required by rust-runner — e.g. SHELL, SPARK
+
+  // --- addressing ---
+  string workflow_instance_host = 5; // required by rust-runner — master callback address host:port
+  string host                   = 6; // required by rust-runner — worker self address host:port
+
+  // --- execution environment ---
+  string execute_path        = 7;  // required by rust-runner — working directory
+  string log_path            = 8;  // required by rust-runner — log output path
+  string task_params         = 9;  // required by rust-runner — task parameter JSON blob
+  string tenant_code         = 10; // required by rust-runner — OS user to run under
+  string environment_config  = 11; // optional — shell script to source before execution
+  string worker_group        = 12; // java-only — routing label, not needed by runner
+
+  // --- timing ---
+  int64  first_submit_time   = 13; // optional — epoch ms
+  int64  start_time          = 14; // optional — epoch ms
+  int64  end_time            = 15; // optional — epoch ms
+  int64  schedule_time       = 16; // optional — epoch ms
+
+  // --- workflow context ---
+  int64  workflow_definition_code    = 17; // optional
+  int32  workflow_definition_version = 18; // optional
+  int32  workflow_definition_id      = 19; // java-only
+  int64  project_code                = 20; // optional
+  string workflow_instance_name      = 21; // optional
+
+  // --- parameters ---
+  string global_params                  = 22; // optional — global parameter JSON
+  map<string, Property> prepare_params_map = 23; // optional — resolved params map
+  repeated Property var_pool            = 24; // optional — variables from upstream tasks
+
+  // --- timeout ---
+  string task_timeout_strategy = 25; // optional — enum name: WARN / FAILED / WARN_FAILED
+  int32  task_timeout          = 26; // optional — timeout in seconds (0 = no limit)
+
+  // --- runtime tracking ---
+  string app_ids    = 27; // optional — YARN/K8s application IDs (comma separated)
+  int32  process_id = 28; // optional — OS PID (set after start)
+
+  // --- executor identity ---
+  int32 executor_id = 29; // java-only
+
+  // --- resource limits ---
+  int32 cpu_quota   = 30; // optional — CPU quota (percentage, -1 = unlimited)
+  int32 memory_max  = 31; // optional — memory cap (MB, -1 = unlimited)
+
+  // --- dry-run ---
+  int32 dry_run = 32; // optional — 0 = normal, 1 = dry-run (skip actual execution)
+
+  // --- complex sub-contexts (serialised as JSON strings, java-only) ---
+  string sql_task_execution_context = 33; // java-only — SQL task extra config JSON
+  string k8s_task_execution_context = 34; // java-only — K8s task extra config JSON
+  string resource_context            = 35; // java-only — resource file context JSON
+  string resource_parameters_helper  = 36; // java-only — resource param helper JSON
+
+  // --- paths ---
+  string app_info_path = 37; // optional — YARN/Flink app info file path
+}
+
+// ============================================================
+// Service MasterToWorker
+// Called by master (or logic-task container on master) targeting
+// a remote worker node.
+// ============================================================
+service MasterToWorker {
+  // Dispatch a new task instance to the worker.
+  rpc DispatchTask(DispatchTaskRequest) returns (DispatchTaskResponse);
+
+  // Request the worker to kill a running task.
+  rpc KillTask(KillTaskRequest) returns (KillTaskResponse);
+
+  // Request the worker to pause a running task.
+  rpc PauseTask(PauseTaskRequest) returns (PauseTaskResponse);
+
+  // Notify the worker that the owning master has changed (failover).
+  rpc ReassignMaster(ReassignMasterRequest) returns (ReassignMasterResponse);
+
+  // ACK a lifecycle event the worker previously reported; stops retries.
+  rpc AckLifecycleEvent(LifecycleEventAck) returns (AckResponse);
+
+  // Query all task instances currently held by the worker.
+  rpc QueryTaskInstances(QueryTaskInstancesRequest) returns (QueryTaskInstancesResponse);
+}
+
+// --- DispatchTask ---
+
+message DispatchTaskRequest {
+  TaskExecutionContext task_execution_context = 1; // required by rust-runner
+}
+
+message DispatchTaskResponse {
+  bool   dispatch_success = 1; // required by rust-runner
+  string message          = 2; // optional — failure reason
+}
+
+// --- KillTask ---
+
+message KillTaskRequest {
+  int32 task_instance_id = 1; // required by rust-runner
+}
+
+message KillTaskResponse {
+  bool   success = 1; // required by rust-runner
+  string message = 2; // optional — failure reason
+}
+
+// --- PauseTask ---
+
+message PauseTaskRequest {
+  int32 task_instance_id = 1; // required by rust-runner
+}
+
+message PauseTaskResponse {
+  bool   success = 1; // required by rust-runner
+  string message = 2; // optional — failure reason
+}
+
+// --- ReassignMaster (worker-side failover notification) ---
+
+message ReassignMasterRequest {
+  int32  task_instance_id = 1; // required by rust-runner
+  string workflow_host    = 2; // required by rust-runner — new master address host:port
+}
+
+message ReassignMasterResponse {
+  bool   success = 1; // optional
+  string message = 2; // optional
+}
+
+// --- AckLifecycleEvent ---
+// Master sends this after successfully processing a lifecycle event
+// so the worker stops retrying that event.
+
+message LifecycleEventAck {
+  int32                task_executor_id             = 1; // required by rust-runner — task instance ID
+  TaskLifecycleEventType task_executor_lifecycle_event_type = 2; // required by rust-runner
+}
+
+message AckResponse {
+  // Empty; presence of response frame confirms delivery.
+}
+
+// --- QueryTaskInstances ---
+
+message QueryTaskInstancesRequest {
+  // Empty — returns all currently running task instances on the worker.
+}
+
+message QueryTaskInstancesResponse {
+  repeated int32 task_instance_ids = 1; // java-only — IDs of running tasks
+}
+
+// ============================================================
+// Service WorkerToMaster
+// Lifecycle events sent from worker (or rust-runner) to master.
+// All RPCs return void-equivalent (EmptyResponse) because the
+// worker drives retries until it receives an AckLifecycleEvent
+// via MasterToWorker.AckLifecycleEvent.
+// ============================================================
+service WorkerToMaster {
+  // Worker accepted the dispatch and is setting up the executor.
+  rpc ReportTaskDispatched(TaskDispatchedEvent) returns (EmptyResponse);
+
+  // Executor process/thread has started.
+  rpc ReportTaskRunning(TaskRunningEvent) returns (EmptyResponse);
+
+  // Runtime context changed (PID assigned, appIds discovered).
+  rpc ReportTaskRuntimeContextChanged(TaskRuntimeContextChangedEvent) returns (EmptyResponse);
+
+  // Task finished successfully.
+  rpc ReportTaskSuccess(TaskSuccessEvent) returns (EmptyResponse);
+
+  // Task finished with failure.
+  rpc ReportTaskFailed(TaskFailedEvent) returns (EmptyResponse);
+
+  // Kill has completed.
+  rpc ReportTaskKilled(TaskKilledEvent) returns (EmptyResponse);
+
+  // Pause has completed.
+  rpc ReportTaskPaused(TaskPausedEvent) returns (EmptyResponse);
+}
+
+// Shared empty response used when master drives acknowledgement
+// through the reverse channel (AckLifecycleEvent).
+message EmptyResponse {}
+
+// --- ReportTaskDispatched ---
+// Corresponds to ITaskExecutorEventListener.onTaskExecutorDispatched
+
+message TaskDispatchedEvent {
+  int32  task_instance_id      = 1; // required by rust-runner
+  int32  workflow_instance_id  = 2; // required by rust-runner
+  string task_instance_host    = 3; // required by rust-runner — worker address
+  int64  event_create_time     = 4; // optional — epoch ms
+  int64  latest_report_time    = 5; // java-only — retry tracking timestamp
+}
+
+// --- ReportTaskRunning ---
+// Corresponds to ITaskExecutorEventListener.onTaskExecutorRunning
+
+message TaskRunningEvent {
+  int32  task_instance_id     = 1; // required by rust-runner
+  int32  workflow_instance_id = 2; // required by rust-runner
+  string task_instance_host   = 3; // required by rust-runner — worker address
+  int64  start_time           = 4; // required by rust-runner — epoch ms
+  string log_path             = 5; // required by rust-runner — log file path
+  string execute_path         = 6; // optional — working directory
+  int64  event_create_time    = 7; // optional — epoch ms
+  int64  latest_report_time   = 8; // java-only
+}
+
+// --- ReportTaskRuntimeContextChanged ---
+// Corresponds to ITaskExecutorEventListener.onTaskExecutorRuntimeContextChanged
+
+message TaskRuntimeContextChangedEvent {
+  int32  task_instance_id     = 1; // required by rust-runner
+  int32  workflow_instance_id = 2; // optional
+  string task_instance_host   = 3; // optional
+  int32  process_id           = 4; // optional — @Deprecated in Java, OS PID
+  string app_ids              = 5; // required by rust-runner — YARN/K8s app IDs
+  int64  event_create_time    = 6; // optional — epoch ms
+  int64  latest_report_time   = 7; // java-only
+}
+
+// --- ReportTaskSuccess ---
+// Corresponds to ITaskExecutorEventListener.onTaskExecutorSuccess
+
+message TaskSuccessEvent {
+  int32            task_instance_id     = 1; // required by rust-runner
+  int32            workflow_instance_id = 2; // required by rust-runner
+  string           task_instance_host   = 3; // optional
+  int64            end_time             = 4; // required by rust-runner — epoch ms
+  repeated Property var_pool            = 5; // required by rust-runner — output variables for downstream tasks
+  int64            event_create_time    = 6; // optional — epoch ms
+  int64            latest_report_time   = 7; // java-only
+}
+
+// --- ReportTaskFailed ---
+// Corresponds to ITaskExecutorEventListener.onTaskExecutorFailed
+
+message TaskFailedEvent {
+  int32  task_instance_id     = 1; // required by rust-runner
+  int32  workflow_instance_id = 2; // required by rust-runner
+  string task_instance_host   = 3; // optional
+  string app_ids              = 4; // optional — YARN/K8s app IDs for debug
+  int64  end_time             = 5; // required by rust-runner — epoch ms
+  int64  event_create_time    = 6; // optional — epoch ms
+  int64  latest_report_time   = 7; // java-only
+}
+
+// --- ReportTaskKilled ---
+// Corresponds to ITaskExecutorEventListener.onTaskExecutorKilled
+
+message TaskKilledEvent {
+  int32  task_instance_id     = 1; // required by rust-runner
+  int32  workflow_instance_id = 2; // required by rust-runner
+  string task_instance_host   = 3; // optional
+  int64  end_time             = 4; // required by rust-runner — epoch ms
+  int64  event_create_time    = 5; // optional — epoch ms
+  int64  latest_report_time   = 6; // java-only
+}
+
+// --- ReportTaskPaused ---
+// Corresponds to ITaskExecutorEventListener.onTaskExecutorPaused
+
+message TaskPausedEvent {
+  int32  task_instance_id     = 1; // required by rust-runner
+  int32  workflow_instance_id = 2; // required by rust-runner
+  string task_instance_host   = 3; // optional
+  int64  end_time             = 4; // required by rust-runner — epoch ms
+  int64  event_create_time    = 5; // optional — epoch ms
+  int64  latest_report_time   = 6; // java-only
+}

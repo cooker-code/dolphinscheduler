@@ -1,0 +1,29 @@
+syntax = "proto3";
+package dsl.runner.v1;
+
+service TaskRunner {
+  rpc Execute (TaskRequest)   returns (stream TaskEvent);
+  rpc Cancel  (CancelRequest) returns (CancelResponse);
+}
+
+message TaskRequest {
+  string task_instance_id = 1;
+  string task_type        = 2;
+  string script           = 3;
+  map<string, string> env = 4;
+  string working_dir      = 5;
+  string tenant_user      = 6;
+  int32  timeout_seconds  = 7;
+}
+
+message TaskEvent {
+  oneof payload {
+    LogLine    log_line    = 1;
+    ExitResult exit_result = 2;
+  }
+}
+
+message LogLine    { int64 timestamp_ms = 1; string line = 2; }
+message ExitResult { int32 exit_code = 1; int32 process_id = 2; }
+message CancelRequest  { string task_instance_id = 1; }
+message CancelResponse { bool ok = 1; }
