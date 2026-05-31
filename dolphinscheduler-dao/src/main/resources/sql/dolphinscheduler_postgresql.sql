@@ -1409,3 +1409,21 @@ create table t_ds_jdbc_registry_data_change_event
     create_time        timestamp not null default current_timestamp,
     primary key (id)
 );
+
+-- SQL Job Git management
+DROP TABLE IF EXISTS t_ds_sql_job;
+create table t_ds_sql_job
+(
+    id                    bigserial    not null,
+    project_code          bigint       not null,
+    job_slug              varchar(255) not null,
+    job_name              varchar(255) not null,
+    personal_branch       varchar(255) not null,
+    current_master_commit varchar(64)  default null,
+    owner                 varchar(128) not null,
+    datasource_id         integer      default null,
+    create_time           timestamp    not null default current_timestamp,
+    update_time           timestamp    not null default current_timestamp,
+    primary key (id),
+    constraint uk_project_slug unique (project_code, job_slug)
+);

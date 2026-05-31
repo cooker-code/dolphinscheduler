@@ -3,7 +3,7 @@
   "name": "sql-git-version-management",
   "title": "SQL 内容 Git 管理：master 为线上分支，个人分支为开发测试，AI 辅助",
   "description": "",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

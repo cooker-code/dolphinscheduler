@@ -1394,3 +1394,23 @@ CREATE TABLE `t_ds_jdbc_registry_data_change_event`
     PRIMARY KEY (`id`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8;
+
+-- SQL Job Git management
+DROP TABLE IF EXISTS `t_ds_sql_job`;
+CREATE TABLE `t_ds_sql_job`
+(
+    `id`                    BIGINT       NOT NULL AUTO_INCREMENT COMMENT 'primary key',
+    `project_code`          BIGINT       NOT NULL COMMENT 'project code',
+    `job_slug`              VARCHAR(255) NOT NULL COMMENT 'unique job identifier within project',
+    `job_name`              VARCHAR(255) NOT NULL COMMENT 'display name',
+    `personal_branch`       VARCHAR(255) NOT NULL COMMENT 'user git branch name',
+    `current_master_commit` VARCHAR(64)  DEFAULT NULL COMMENT 'last deployed commit hash',
+    `owner`                 VARCHAR(128) NOT NULL COMMENT 'creator username',
+    `datasource_id`         INT          DEFAULT NULL COMMENT 'bound datasource',
+    `create_time`           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'create time',
+    `update_time`           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'update time',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_project_slug` (`project_code`, `job_slug`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COMMENT = 'SQL Job metadata';
