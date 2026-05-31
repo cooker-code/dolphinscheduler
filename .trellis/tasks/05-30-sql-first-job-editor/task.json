@@ -3,7 +3,7 @@
   "name": "sql-first-job-editor",
   "title": "SQL-first 作业开发界面：用户直接写 SQL，自动生成 DAG 并上线",
   "description": "",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": ".github/actions/comment-on-issue",

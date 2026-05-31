@@ -201,6 +201,29 @@ export default {
         showSide: true,
         auth: []
       }
+    },
+    {
+      path: '/projects/:projectCode/sql-jobs',
+      name: 'sql-job-list',
+      component: components['projects-sql-jobs'],
+      meta: {
+        title: 'SQL 作业',
+        activeMenu: 'projects',
+        showSide: true,
+        auth: []
+      }
+    },
+    {
+      path: '/projects/:projectCode/sql-jobs/:id',
+      name: 'sql-job-editor',
+      component: components['projects-sql-jobs-editor'],
+      meta: {
+        title: 'SQL 编辑器',
+        activeMenu: 'projects',
+        activeSide: '/projects/:projectCode/sql-jobs',
+        showSide: true,
+        auth: []
+      }
     }
   ]
 }

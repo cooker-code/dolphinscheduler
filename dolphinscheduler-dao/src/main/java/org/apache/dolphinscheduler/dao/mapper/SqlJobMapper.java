@@ -22,6 +22,8 @@ import org.apache.dolphinscheduler.dao.entity.SqlJob;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
+
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**
@@ -39,4 +41,12 @@ public interface SqlJobMapper extends BaseMapper<SqlJob> {
      */
     SqlJob queryByProjectCodeAndSlug(@Param("projectCode") long projectCode,
                                      @Param("jobSlug") String jobSlug);
+
+    /**
+     * List all SQL jobs for a project, ordered by update_time desc.
+     *
+     * @param projectCode project code
+     * @return list of SqlJob
+     */
+    List<SqlJob> selectByProjectCode(@Param("projectCode") long projectCode);
 }

@@ -18,6 +18,7 @@
 package org.apache.dolphinscheduler.service.sqljob;
 
 import lombok.Data;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 

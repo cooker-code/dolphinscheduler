@@ -28,7 +28,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 
 /**
  * SQL Job metadata entity.
- * Stores per-job Git branch information and the last deployed master commit hash.
+ * Stores per-job Git branch information and sql-first-job-editor content.
  */
 @Data
 @TableName("t_ds_sql_job")
@@ -81,6 +81,30 @@ public class SqlJob {
      */
     @TableField(value = "datasource_id")
     private Integer datasourceId;
+
+    /**
+     * bound datasource type, e.g. HIVE, MYSQL (optional)
+     */
+    @TableField(value = "datasource_type")
+    private String datasourceType;
+
+    /**
+     * SQL content saved in the editor draft (editor-managed, not Git-committed yet)
+     */
+    @TableField(value = "sql_content")
+    private String sqlContent;
+
+    /**
+     * linked DS workflow definition code after deploy; null before first deploy
+     */
+    @TableField(value = "workflow_code")
+    private Long workflowCode;
+
+    /**
+     * creator user id
+     */
+    @TableField(value = "user_id")
+    private Integer userId;
 
     @TableField(value = "create_time")
     private Date createTime;

@@ -1410,7 +1410,7 @@ create table t_ds_jdbc_registry_data_change_event
     primary key (id)
 );
 
--- SQL Job Git management
+-- SQL Job metadata (used by both git management and sql-first-job-editor)
 DROP TABLE IF EXISTS t_ds_sql_job;
 create table t_ds_sql_job
 (
@@ -1422,6 +1422,10 @@ create table t_ds_sql_job
     current_master_commit varchar(64)  default null,
     owner                 varchar(128) not null,
     datasource_id         integer      default null,
+    datasource_type       varchar(64)  default null,
+    sql_content           text         default null,
+    workflow_code         bigint       default null,
+    user_id               integer      default null,
     create_time           timestamp    not null default current_timestamp,
     update_time           timestamp    not null default current_timestamp,
     primary key (id),

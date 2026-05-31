@@ -21,10 +21,20 @@
 
     <select id="queryByProjectCodeAndSlug" resultType="org.apache.dolphinscheduler.dao.entity.SqlJob">
         select id, project_code, job_slug, job_name, personal_branch,
-               current_master_commit, owner, datasource_id, create_time, update_time
+               current_master_commit, owner, datasource_id, datasource_type,
+               sql_content, workflow_code, user_id, create_time, update_time
         from t_ds_sql_job
         where project_code = #{projectCode}
           and job_slug = #{jobSlug}
+    </select>
+
+    <select id="selectByProjectCode" resultType="org.apache.dolphinscheduler.dao.entity.SqlJob">
+        select id, project_code, job_slug, job_name, personal_branch,
+               current_master_commit, owner, datasource_id, datasource_type,
+               sql_content, workflow_code, user_id, create_time, update_time
+        from t_ds_sql_job
+        where project_code = #{projectCode}
+        order by update_time desc
     </select>
 
 </mapper>
