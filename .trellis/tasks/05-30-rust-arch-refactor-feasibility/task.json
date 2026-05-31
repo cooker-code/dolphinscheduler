@@ -3,7 +3,7 @@
   "name": "rust-arch-refactor-feasibility",
   "title": "Rust 架构重构可行性研究：组件评估与渐进式替换路线",
   "description": "梳理 DolphinScheduler 全量模块作用，评估各组件用 Rust 重写的收益/代价/风险，给出渐进式重构建议（不含实施）",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": ".github/actions/comment-on-issue",
