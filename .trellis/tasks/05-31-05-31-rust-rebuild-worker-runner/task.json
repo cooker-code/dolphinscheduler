@@ -1,0 +1,29 @@
+{
+  "id": "05-31-rust-rebuild-worker-runner",
+  "name": "05-31-rust-rebuild-worker-runner",
+  "title": "Rust 模块重建：Worker Shell Runner + Extract Proto",
+  "description": "",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": "backend",
+  "priority": "P1",
+  "creator": "wangliang",
+  "assignee": "wangliang",
+  "createdAt": "2026-05-31",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "my-dev",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "05-31-05-31-dsl-task-runner-poc",
+    "05-31-05-31-extract-proto-draft"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}
