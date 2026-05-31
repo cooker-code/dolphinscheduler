@@ -1,25 +1,30 @@
-# DolphinScheduler 本地开发环境 Docker Compose
-# 用途：仅启动依赖服务（PostgreSQL、ZooKeeper），项目代码在本地IDEA中启动
+# DolphinScheduler 本地开发依赖：PostgreSQL + ZooKeeper
+# 项目代码在本地 IDEA / mvn 启动，本文件只起依赖容器。
+#
+# 用法：
+#   ./start.sh docker    # 起容器
+#   ./stop.sh  docker    # 停容器（保留数据卷）
 
-version: '3.8'
+# 固定 project 名，避免目录改名时容器/卷被孤立
+# 沿用旧 project 名 "dolphinscheduler"（之前 docker-compose-dev.yml 隐式使用），
+# 这样容器名/网络/卷都能对齐到现有资源，不会重建。
+name: dolphinscheduler
 
 services:
-  # PostgreSQL 数据库
   dolphinscheduler-postgresql:
     image: postgres:14-alpine
     container_name: dolphinscheduler-postgresql
     hostname: dolphinscheduler-postgresql
     ports:
-      - "5433:5432"
+      - "5433:5432"   # 宿主机 5433 -> 容器 5432，避开本机 PG 默认端口
     environment:
       TZ: Asia/Shanghai
       POSTGRES_DB: dolphinscheduler
       POSTGRES_USER: root
       POSTGRES_PASSWORD: root
     volumes:
-      # 挂载初始化SQL脚本（如果需要手动初始化）
-      - ./dolphinscheduler-dao/src/main/resources/sql/dolphinscheduler_postgresql.sql:/docker-entrypoint-initdb.d/dolphinscheduler_postgresql.sql
-      # 数据持久化
+      # 首次启动时自动执行（库为空时才会跑）
+      - ../dolphinscheduler-dao/src/main/resources/sql/dolphinscheduler_postgresql.sql:/docker-entrypoint-initdb.d/dolphinscheduler_postgresql.sql
       - dolphinscheduler-postgresql-data:/var/lib/postgresql/data
     networks:
       - dolphinscheduler-dev
@@ -30,7 +35,6 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # ZooKeeper 注册中心
   dolphinscheduler-zookeeper:
     image: zookeeper:3.8
     container_name: dolphinscheduler-zookeeper
@@ -52,48 +56,6 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # 可选：MySQL（如果您想用MySQL而非PostgreSQL）
-  # dolphinscheduler-mysql:
-  #   image: mysql:8.0
-  #   container_name: dolphinscheduler-mysql
-  #   hostname: dolphinscheduler-mysql
-  #   ports:
-  #     - "3306:3306"
-  #   environment:
-  #     TZ: Asia/Shanghai
-  #     MYSQL_ROOT_PASSWORD: root
-  #     MYSQL_DATABASE: dolphinscheduler
-  #   volumes:
-  #     - ./dolphinscheduler-dao/src/main/resources/sql/dolphinscheduler_mysql.sql:/docker-entrypoint-initdb.d/dolphinscheduler_mysql.sql
-  #     - dolphinscheduler-mysql-data:/var/lib/mysql
-  #   command: --default-authentication-plugin=mysql_native_password
-  #   networks:
-  #     - dolphinscheduler-dev
-  #   healthcheck:
-  #     test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-  #   restart: unless-stopped
-
-  # 可选：Etcd（如果您想用Etcd作为注册中心）
-  # dolphinscheduler-etcd:
-  #   image: quay.io/coreos/etcd:v3.5.9
-  #   container_name: dolphinscheduler-etcd
-  #   hostname: dolphinscheduler-etcd
-  #   ports:
-  #     - "2379:2379"
-  #   environment:
-  #     - ETCD_NAME=etcd0
-  #     - ETCD_DATA_DIR=/etcd-data
-  #     - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
-  #     - ETCD_ADVERTISE_CLIENT_URLS=http://localhost:2379
-  #   volumes:
-  #     - dolphinscheduler-etcd-data:/etcd-data
-  #   networks:
-  #     - dolphinscheduler-dev
-  #   restart: unless-stopped
-
 networks:
   dolphinscheduler-dev:
     driver: bridge
@@ -102,12 +64,11 @@ networks:
 volumes:
   dolphinscheduler-postgresql-data:
     driver: local
+    # 与旧 project（默认目录名前缀）创建的卷对齐，复用现有数据
+    name: dolphinscheduler_dolphinscheduler-postgresql-data
   dolphinscheduler-zookeeper-data:
     driver: local
+    name: dolphinscheduler_dolphinscheduler-zookeeper-data
   dolphinscheduler-zookeeper-datalog:
     driver: local
-  # dolphinscheduler-mysql-data:
-  #   driver: local
-  # dolphinscheduler-etcd-data:
-  #   driver: local
-
+    name: dolphinscheduler_dolphinscheduler-zookeeper-datalog
