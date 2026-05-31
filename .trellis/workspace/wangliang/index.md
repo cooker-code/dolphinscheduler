@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 1
+- **Total Sessions**: 2
 - **Last Active**: 2026-05-31
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~42 | Active |
+| `journal-1.md` | ~77 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 2 | 2026-05-31 | Rust 重建实施：dsl-task-runner PoC + Extract proto 草稿 | `09240869e5`, `fe0f6d1b97` | `my-dev` |
 | 1 | 2026-05-31 | Rust 架构重构可行性研究：多 Agent 深化取证 + 全文修订 | `55dbdc5c82`, `fdb168de4e` | `my-dev` |
 <!-- @@@/auto:session-history -->
 
