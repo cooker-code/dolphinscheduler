@@ -83,9 +83,12 @@ const err = (error: unknown): Promise<never> => {
 }
 
 service.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  config.headers.set('sessionId', userStore.getSessionId)
   const language = cookies.get('language')
-  if (language) config.headers.set('language', language)
+  config.headers = {
+    ...config.headers,
+    sessionId: userStore.getSessionId,
+    ...(language ? { language } : {})
+  } as InternalAxiosRequestConfig['headers']
 
   return config
 }, err)

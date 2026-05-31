@@ -55,6 +55,19 @@ router.beforeEach(
     NProgress.start()
     const userStore = useUserStore()
     const metaData: metaData = to.meta
+
+    if (to.path !== '/login' && !userStore.sessionId) {
+      next({ path: '/login' })
+      NProgress.done()
+      return
+    }
+
+    if (to.path === '/login' && userStore.sessionId) {
+      next({ path: '/home' })
+      NProgress.done()
+      return
+    }
+
     if (
       metaData.auth?.includes('ADMIN_USER') &&
       (userStore.getUserInfo as UserInfoRes).userType !== 'ADMIN_USER' &&
