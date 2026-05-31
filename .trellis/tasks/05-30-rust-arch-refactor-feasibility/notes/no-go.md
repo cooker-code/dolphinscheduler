@@ -21,7 +21,7 @@
 
 **不可绕过的 JVM 依赖**
 
-- Spring Boot `2.7.11`（`spring.boot.version`，`dolphinscheduler-bom/pom.xml:67`）
+- Spring Boot `2.7.11`（`spring-boot.version`，`dolphinscheduler-bom/pom.xml:32`）
 - 整个模块 278 个 Java 源文件，合计 **23,455 行**（`wc -l` 实测）
 - 最重的类（行数）：
   - `DependentExecute.java` 468 行 — 跨 workflow 依赖拓扑判断
