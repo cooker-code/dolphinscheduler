@@ -24,6 +24,7 @@ These guides help you **ask the right questions before coding**.
 | [Code Reuse Thinking Guide](./code-reuse-thinking-guide.md) | Identify patterns and reduce duplication | When you notice repeated patterns |
 | [Cross-Layer Thinking Guide](./cross-layer-thinking-guide.md) | Think through data flow across layers | Features spanning multiple layers |
 | [Git Fork Workflow](./git-fork-workflow.md) | fork 模式下的 push/pull/同步上游约定 | 推代码、提 PR、与 apache 同步前 |
+| [Tool Use Guide](./tool-use-guide.md) | 选对编辑工具，避免反向破坏代码 | 改文件、删文件、commit、force push 之前 |
 
 ---
 
