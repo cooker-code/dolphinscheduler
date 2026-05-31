@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { reactive } from 'vue'
+import { reactive, onUnmounted } from 'vue'
 import { useAsyncState } from '@vueuse/core'
 import { listMonitorServerNode } from '@/service/modules/monitor'
 import type { MasterNode } from '@/service/modules/monitor/types'
@@ -24,6 +24,9 @@ export function useMaster() {
   const variables = reactive({
     data: []
   })
+
+  let timer: ReturnType<typeof setInterval> | null = null
+
   const getTableMaster = () => {
     const { state } = useAsyncState(
       listMonitorServerNode('MASTER').then((res: Array<MasterNode>) => {
@@ -32,7 +35,22 @@ export function useMaster() {
       []
     )
 
+    if (timer) clearInterval(timer)
+    timer = setInterval(() => {
+      listMonitorServerNode('MASTER').then((res: Array<MasterNode>) => {
+        variables.data = res as any
+      })
+    }, 10000)
+
     return state
   }
+
+  onUnmounted(() => {
+    if (timer) {
+      clearInterval(timer)
+      timer = null
+    }
+  })
+
   return { variables, getTableMaster }
 }

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { reactive } from 'vue'
+import { reactive, onUnmounted } from 'vue'
 import { useAsyncState } from '@vueuse/core'
 import { listMonitorServerNode } from '@/service/modules/monitor'
 import type { WorkerNode } from '@/service/modules/monitor/types'
@@ -25,6 +25,8 @@ export function useWorker() {
     data: []
   })
 
+  let timer: ReturnType<typeof setInterval> | null = null
+
   const getTableWorker = () => {
     const { state } = useAsyncState(
       listMonitorServerNode('WORKER').then((res: Array<WorkerNode>) => {
@@ -33,8 +35,22 @@ export function useWorker() {
       []
     )
 
+    if (timer) clearInterval(timer)
+    timer = setInterval(() => {
+      listMonitorServerNode('WORKER').then((res: Array<WorkerNode>) => {
+        variables.data = res as any
+      })
+    }, 10000)
+
     return state
   }
+
+  onUnmounted(() => {
+    if (timer) {
+      clearInterval(timer)
+      timer = null
+    }
+  })
 
   return { variables, getTableWorker }
 }
