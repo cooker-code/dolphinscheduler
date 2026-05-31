@@ -75,3 +75,38 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 3: SQL Studio 双线实施：git-version-management Phase 1.2 + sql-first-job-editor Phase 1.1 全栈
+
+**Date**: 2026-05-31
+**Task**: SQL Studio 双线实施：git-version-management Phase 1.2 + sql-first-job-editor Phase 1.1 全栈
+**Package**: backend
+**Branch**: `my-dev`
+
+### Summary
+
+并行推进 SQL Studio 两条主线。sql-git-version-management Phase 1.1（JGit 依赖 + t_ds_sql_job DDL 三方言 + SqlJob Entity/Mapper + SqlJobGitService 接口骨架）和 Phase 1.2（SqlJobLockManager per-job 锁 + SqlJobGitServiceImpl 全实现：save/commits/diff/deploy/revert/branchStatus/readSqlAtCommit，27 个单元测试全通）；关键决策：JGit 6.7 降级为 5.13.1（Java 8 兼容），deploy 改用 blob read+write 方案替代 squash merge（避免多作业文件 tree conflict）。sql-first-job-editor Phase 1.1 全栈（激活任务 + 8 个 DTO + SqlParserService 纯正则解析 + DependencyResolverService + DagCompilerService + SqlJobServiceImpl deploy 三步序列 + SqlJobController 6 端点 + 前端路由/API service/types/index.tsx/editor.tsx/deploy-drawer.tsx，10 个 Parser 单元测试全通）；关键决策：JSQLParser 缺失用纯正则，updateWorkflow 需 offline→update→online 三步，路由文件须命名 index.tsx/editor.tsx。spotless apply + mvn compile PASS，37 个测试全通。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e59081527d` | (see git log) |
+| `1937de9759` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
